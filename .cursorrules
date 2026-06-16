@@ -1,0 +1,144 @@
+I have an idea for a web-based tool. It would have three stages. 
+
+# Stage One 
+
+This would take either an image upload or an image could be pasted in. The user would then be presented with several options for cutting the image up. By cutting up the image what I mean is the image would be one image file, but would contain multiple images. 
+
+Think of a menu ordering page, which has different blocks of images and text of foods, or different blocks with images and text of clothes. Or any other image file that has multiple, separate images. This stage allows the user to set the amount of space around each image, so when the images are cut apart, each has some white space around it. This is adjustable with a input field. 
+
+There are also filters here so the user can leave the images as-is, or use a filtering algorithm to clean them up. One of the images would be displayed so the user can preview what it's going to look like. Next and Previous buttons let the user cycle through all of them. An indicator shows the total number of images and which is being displayed.
+
+Once the user is happy with the images, then can click a button to cut them apart. Once this is complete, then can either download the images as a single ZIP file or proceed to the next step. A later step again allows them to download the images. Note that when downloading the cut up images, several options are available for what format the images should be in, including PNG, JPG, and more.
+
+# Stage Two
+
+Here the user can arrange the images. All the images are displayed, but the user can drag and drop them to new positions. When one is moved, say, from the bottom right-hand corner to the top left-hand corner, the rest of the images scoot over and rearrange themselves.
+
+The user has several controls here, including tweaking the space between images. Those same filters from stage one are available if the user wants to clean up or otherwise alter the way the images look. Lastly, the user can add text to the screen. A text tool lets the user add different fonts and sizes of text, as well as elements such as square or rectangular outlines so they could, for example, create a square block with an image and text inside it.
+
+The amount of tools and controls would be extremely limited compared to something like Canva.
+
+# Stage Three
+
+This is the final stage. Here, the user can decide what size of their final image. They can select a resolution or size it in inches, and either save the final file to disk or print it. They could, for example print the page in 5" x 7" format, or as a file in a particular resolution.
+
+There is also the option to save all of the images created in Stage One.
+
+# Technical Stack
+
+To build a tool like **ReFrame Image Management** completely in the browser, you can use a modern web stack that handles all the image processing locally. This means you won't need an expensive backend server to process heavy image files; everything happens fast right on the user's machine.
+
+Here is a practical technical stack tailored for this project.
+
+### Frontend Framework
+
+- **React** or **Vue.js** - This is the core engine for your user interface. Stage Two requires a lot of "state management" (tracking which image is where, what text has been added, and updating the screen instantly when things change). Frameworks like these make handling that fluid data straightforward.
+
+### Image Processing & Layout
+
+- **HTML5 Canvas API** - This is the foundational browser tool used to actually load the primary image, calculate the coordinates to chop it up based on user padding, and apply filters (like contrast, brightness, or sharpening).
+- **Fabric.js** or **Konva.js** - Raw Canvas programming can get incredibly math-heavy. These libraries sit on top of the Canvas API and treat everything as an object. This makes Stage Two and Stage Three much easier, as they have built-in support for dragging images, resizing text, and drawing bounding boxes.
+
+### Drag-and-Drop Mechanics
+
+- **@hello-pangea/dnd** (formerly RSVP / Drag-and-Drop) or **SortableJS** - These libraries handle the specific "scoot over and rearrange themselves" behavior you want for Stage Two when an image is moved, ensuring smooth grid reordering.
+
+### File Exporting
+
+- **JSZip** - A lightweight library that takes all the individual processed images from Stage One, bundles them together, and triggers a `.zip` download entirely within the browser.
+- **FileSaver.js** - Works alongside the canvas to let users save the final high-resolution output (PNG, JPG) directly to their hard drive.
+
+### Styling & UI Components
+
+- **Tailwind CSS** - A utility-first styling framework that makes it fast to build a clean, minimalist interface with responsive sidebars for your sliders, buttons, and input fields.
+
+# Open-Source
+
+The web tools mentioned earlier—React/Vue, Fabric.js, Konva.js, JSZip, and Tailwind CSS—are completely open-source, free to use, and commercially viable (mostly under the MIT or Apache licenses).
+
+Here is exactly how those open-source libraries handle your requirements directly in the user's browser.
+
+### Loading and Saving Formats
+
+Modern web browsers have native, built-in support via the HTML5 Canvas API to handle the most common image formats without needing external plugins.  
+
+- **Loading** - Browsers natively decode **PNG, JPG, WebP, GIF, and SVG** files. When a user uploads or pastes an image, the browser reads the pixel data instantly.
+- **Saving** - The standard browser function `canvas.toBlob()` can natively convert and export canvas data into **PNG, JPG, and WebP**. If you need to support specialty formats beyond those three (such as TIFF or BMP), open-source JavaScript encoder libraries can be added to handle the conversion.
+
+### Using Filters
+
+Applying algorithms to "clean up" or alter images is fully covered by open-source tools.  
+
+- **Fabric.js and Konva.js** have built-in, hardware-accelerated filter libraries. They use WebGL (your computer's graphics processor) to run algorithms directly on the pixels.
+- You can implement standard cleanup options out of the box, including brightness/contrast adjustments, sharpening filters, grayscale, or color thresholding to clean up text backgrounds.
+
+### Layout, Drag-and-Drop, and ZIP Compilation
+
+- **Rearranging and Scooting** - Open-source libraries like **SortableJS** calculate the grid coordinates automatically. When an image is dragged, it calculates the swap layout in real-time.
+- **Bundling Downloads** - **JSZip** runs entirely in the browser memory. It takes the individual cropped image chunks, structures them into a standard zip folder format, and hands it back to the browser as a local download link.
+
+By keeping everything in the browser using these open-source tools, you avoid server costs, protect user privacy (since images never leave their machine), and ensure fast processing times.  
+
+# Prompt to Generate Initial Prototype of Application
+
+You are an expert frontend engineer. I want to build a functional prototype for a web-based image management tool called **ReFrame**. 
+
+The goal of this prototype is strictly **feature implementation and core logic** so I can test and iterate. The UI does not need to be beautiful or stylized via heavy CSS; a clean, minimal layout using basic HTML/Tailwind with sidebars or tabs for controls is perfect.
+
+Please use the following technical stack:
+
+- **Framework:** React (with Vite for fast setup)
+- **Canvas/Graphics:** Fabric.js (or Konva.js) for image manipulation, text tools, and bounding boxes.
+- **Drag-and-Drop:** SortableJS (or a React wrapper) for grid rearrangement.
+- **File Utilities:** JSZip and FileSaver.js for client-side zipping and file downloads.
+
+Implement the application across three clear functional stages:
+
+---
+
+### STAGE 1: IMAGE UPLOAD, SEGMENTATION, & PREVIEW
+
+**Core Features to Implement:**
+
+1. **Input:** Allow the user to upload an image file via a file picker or by pasting an image directly from their clipboard (PNG, JPG, WebP).
+2. **Auto-Segmentation/Slicing Logic:** Treat the uploaded file as a "sheet" containing multiple sub-images (e.g., a menu page or a sticker sheet). Provide a basic algorithm or manual grid selector to slice the image into individual sub-images. 
+3. **Padding Control:** Add an adjustable number input field ("Padding") that dynamically adds pixels of white space around each segmented sub-image.
+4. **Image Filters:** Provide a few basic canvas-based image filtering algorithms to "clean up" the sub-images (e.g., Brightness/Contrast adjustment, Grayscale, and a Threshold/Sharpen filter to clean up text backgrounds).
+5. **Carousel Preview:** Display a preview of the processed sub-images. Implement "Next" and "Previous" buttons to cycle through them, alongside a text indicator showing the state (e.g., "Image 3 of 12").
+6. **Export 1:** Provide a "Cut Apart & Download ZIP" button. This must use JSZip to bundle all processed sub-images into a single `.zip` file entirely in-browser, offering file format options for PNG or JPG. Provide a second button to "Proceed to Stage 2" passing these individual image objects forward.
+
+---
+
+### STAGE 2: DRAG-AND-DROP ARRANGEMENT & ANNOTATION
+
+**Core Features to Implement:**
+
+1. **Grid Layout:** Display all the sub-images generated from Stage 1 in a responsive grid.
+2. **Reordering Mechanics:** Implement drag-and-drop capability. When a user drags an image to a new position, the remaining images must automatically "scoot over" and fluidly rearrange their grid order.
+3. **Spacing Control:** Add a slider/input to adjust the spacing (gap) between the images in the layout.
+4. **Persistent Filters:** Keep the same image filters from Stage 1 accessible here so users can alter the look of the images globally or individually.
+5. **Annotation Tools:** Implement a highly restricted "Canva-like" canvas layer using Fabric.js/Konva.js that allows users to:
+   - Add text elements with basic font selection and sizing.
+   - Draw simple vector shapes (specifically square and rectangular outlines) to allow users to bound an image and text together.
+
+---
+
+### STAGE 3: RESOLUTION & FINAL EXPORT
+
+**Core Features to Implement:**
+
+1. **Canvas Sizing:** Allow the user to define the dimensions of the final canvas composition. Provide options to select standard digital resolutions or input custom dimensions in inches (assuming a standard 300 DPI calculation for physical printing, e.g., 5" x 7").
+2. **Final Export Options:**
+   - **Save Final Layout:** Export the entire composed canvas layout as a single high-resolution file (PNG or JPG) directly to the user's hard drive using FileSaver.js.
+   - **Print:** Trigger the native browser print dialogue configured to print just the final canvas area at the specified aspect ratio.
+   - **Backup ZIP:** Re-provide the option to download all the individual cropped sub-images created in Stage 1 as a ZIP file.
+
+---
+
+### Technical Constraints & Requirements:
+
+- **No Backend:** All image processing, filtering, zipping, and saving must happen entirely client-side in the browser using the HTML5 Canvas API and the specified libraries.
+- **State Architecture:** Ensure clean state management so that moving between stages doesn't wipe out the processed images or layout coordinates.
+- **Code Structure:** Break the application into logical React components (e.g., `StageOne.jsx`, `StageTwo.jsx`, `StageThree.jsx`, `ImagePreviewer.jsx`).
+
+Please write the complete, clean, modular code to get this prototype running.
