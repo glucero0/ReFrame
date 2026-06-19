@@ -241,7 +241,7 @@ export default function ArrangeCanvas() {
 
   const persistCanvas = useCallback(() => {
     const canvas = fabricRef.current
-    if (!canvas) return
+    if (!canvas || !initializedRef.current) return
     saveStage2Canvas(JSON.stringify(canvas.toObject([...CANVAS_PROPS])))
   }, [saveStage2Canvas])
 
