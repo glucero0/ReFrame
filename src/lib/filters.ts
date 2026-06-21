@@ -1,5 +1,13 @@
+import { applyBackgroundRemoval, type Rgb } from './backgroundRemoval'
 import type { FilterSettings } from './regionTypes'
-import { hasActiveFilters } from './filterDefaults'
+import { hasActiveFilters, normalizeFilterSettings } from './filterDefaults'
+
+function pixelDimensions(width: number, height: number): { width: number; height: number } {
+  return {
+    width: Math.max(1, Math.floor(width)),
+    height: Math.max(1, Math.floor(height)),
+  }
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
@@ -10,26 +18,40 @@ const TEXT_THRESHOLD_LEVEL = 210
 
 export function applyFiltersToContext(
   ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
+  rawWidth: number,
+  rawHeight: number,
   settings: FilterSettings,
-): void {
-  if (!hasActiveFilters(settings)) return
+): Rgb | null {
+  const filters = normalizeFilterSettings(settings)
+  const { width, height } = pixelDimensions(rawWidth, rawHeight)
+  const filtersWithoutBg = { ...filters, bgRemove: false }
 
-  applyPixelAdjustments(ctx, width, height, settings)
-  applyStyleFilters(ctx, width, height, settings, false)
+  if (hasActiveFilters(filtersWithoutBg)) {
+    applyPixelAdjustments(ctx, width, height, filters)
+    applyStyleFilters(ctx, width, height, filters, false)
 
-  if (settings.sharpen) {
-    applySharpen(ctx, width, height)
+    if (filters.sharpen) {
+      applySharpen(ctx, width, height)
+    }
+
+    if (filters.vignette > 0) {
+      applyVignette(ctx, width, height, filters.vignette)
+    }
+
+    if (filters.blur > 0) {
+      applyStyleFilters(ctx, width, height, filters, true)
+    }
   }
 
-  if (settings.vignette > 0) {
-    applyVignette(ctx, width, height, settings.vignette)
+  if (filters.bgRemove) {
+    return applyBackgroundRemoval(ctx, width, height, {
+      keyColor: filters.bgRemoveColor,
+      tolerance: filters.bgRemoveTolerance,
+      fromEdgesOnly: filters.bgRemoveFromEdges,
+    })
   }
 
-  if (settings.blur > 0) {
-    applyStyleFilters(ctx, width, height, settings, true)
-  }
+  return null
 }
 
 function applyPixelAdjustments(

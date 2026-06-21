@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import type { Rgb } from '../../lib/backgroundRemoval'
+import CutoutPreviewSurface from './CutoutPreviewSurface'
 
 type BeforeAfterCompareProps = {
   originalUrl: string
   editedUrl: string
   alt: string
   fillHeight?: boolean
+  pickColorActive?: boolean
+  onPickColor?: (color: Rgb) => void
 }
 
 export default function BeforeAfterCompare({
@@ -12,44 +16,83 @@ export default function BeforeAfterCompare({
   editedUrl,
   alt,
   fillHeight = false,
+  pickColorActive = false,
+  onPickColor,
 }: BeforeAfterCompareProps) {
   const [compare, setCompare] = useState(false)
   const [split, setSplit] = useState(50)
 
-  const imageClass = fillHeight
+  const surfaceClass = fillHeight
     ? 'h-full w-full object-contain'
     : 'max-h-48 max-w-full object-contain'
-  const imageFrameClass = fillHeight
+  const frameClass = fillHeight
     ? 'flex h-full min-h-0 w-full items-center justify-center overflow-hidden'
     : 'flex justify-center'
   const rootClass = fillHeight ? 'flex h-full min-h-0 flex-col' : undefined
   const singleShellClass = fillHeight
-    ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200 bg-gray-50'
+    ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200'
     : undefined
-  const singleImageWrapClass = fillHeight
-    ? `${imageFrameClass} min-h-0 flex-1 p-2`
-    : `${imageFrameClass} rounded border border-gray-200 bg-gray-50 p-4`
+  const singleFrameClass = fillHeight
+    ? `${frameClass} min-h-0 flex-1 p-2`
+    : `${frameClass} rounded border border-gray-200 p-4`
 
   const compareCheckbox = (
     <label className="flex shrink-0 items-center gap-2 text-sm text-gray-600">
       <input
         type="checkbox"
         checked={compare}
+        disabled={pickColorActive}
         onChange={(e) => setCompare(e.target.checked)}
       />
       Compare before / after
     </label>
   )
 
+  if (pickColorActive) {
+    const pickShellClass = fillHeight
+      ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-blue-300'
+      : 'overflow-hidden rounded border border-blue-300'
+
+    return (
+      <div className={rootClass}>
+        <div className={pickShellClass}>
+          <div className={fillHeight ? `${frameClass} min-h-0 flex-1 p-2` : `${frameClass} p-4`}>
+            <CutoutPreviewSurface
+              src={originalUrl}
+              alt={`${alt} original`}
+              className="h-full w-full"
+              surfaceClassName={surfaceClass}
+              onPickColor={onPickColor}
+            />
+          </div>
+          {fillHeight ? (
+            <div className="shrink-0 border-t border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
+              Click the background color to remove.
+            </div>
+          ) : (
+            <p className="bg-blue-50 px-3 py-2 text-xs text-blue-800">
+              Click the background color to remove.
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (!compare) {
     if (fillHeight) {
       return (
         <div className={rootClass}>
           <div className={singleShellClass}>
-            <div className={singleImageWrapClass}>
-              <img src={editedUrl} alt={alt} className={imageClass} />
+            <div className={singleFrameClass}>
+              <CutoutPreviewSurface
+                src={editedUrl}
+                alt={alt}
+                className="h-full w-full"
+                surfaceClassName={surfaceClass}
+              />
             </div>
-            <div className="shrink-0 border-t border-gray-200 px-3 py-1.5">
+            <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-1.5">
               {compareCheckbox}
             </div>
           </div>
@@ -59,8 +102,12 @@ export default function BeforeAfterCompare({
 
     return (
       <div>
-        <div className={singleImageWrapClass}>
-          <img src={editedUrl} alt={alt} className={imageClass} />
+        <div className={singleFrameClass}>
+          <CutoutPreviewSurface
+            src={editedUrl}
+            alt={alt}
+            surfaceClassName={surfaceClass}
+          />
         </div>
         <div className="mt-2">{compareCheckbox}</div>
       </div>
@@ -70,16 +117,26 @@ export default function BeforeAfterCompare({
   if (fillHeight) {
     return (
       <div className={rootClass}>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200 bg-gray-50">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200">
           <div className="flex min-h-0 flex-1">
             <div
-              className="flex h-full min-h-0 shrink-0 items-center justify-center overflow-hidden border-r border-white/80 bg-gray-100 p-2"
+              className="flex h-full min-h-0 shrink-0 items-center justify-center overflow-hidden border-r border-gray-200 p-2"
               style={{ width: `${split}%` }}
             >
-              <img src={originalUrl} alt={`${alt} original`} className={imageClass} />
+              <CutoutPreviewSurface
+                src={originalUrl}
+                alt={`${alt} original`}
+                className="h-full w-full"
+                surfaceClassName={surfaceClass}
+              />
             </div>
-            <div className="flex h-full min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-50 p-2">
-              <img src={editedUrl} alt={alt} className={imageClass} />
+            <div className="flex h-full min-h-0 flex-1 items-center justify-center overflow-hidden p-2">
+              <CutoutPreviewSurface
+                src={editedUrl}
+                alt={alt}
+                className="h-full w-full"
+                surfaceClassName={surfaceClass}
+              />
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-500">
@@ -95,7 +152,7 @@ export default function BeforeAfterCompare({
             />
             <span className="w-10 shrink-0 text-right">Edited</span>
           </div>
-          <div className="shrink-0 border-t border-gray-200 px-3 py-1.5">
+          <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-1.5">
             {compareCheckbox}
           </div>
         </div>
@@ -105,19 +162,27 @@ export default function BeforeAfterCompare({
 
   return (
     <div>
-      <div className="overflow-hidden rounded border border-gray-200 bg-gray-50">
+      <div className="overflow-hidden rounded border border-gray-200">
         <div className="flex max-h-48">
           <div
-            className="flex shrink-0 items-center justify-center overflow-hidden border-r border-white/80 bg-gray-100"
+            className="flex shrink-0 items-center justify-center overflow-hidden border-r border-gray-200"
             style={{ width: `${split}%` }}
           >
-            <img src={originalUrl} alt={`${alt} original`} className={imageClass} />
+            <CutoutPreviewSurface
+              src={originalUrl}
+              alt={`${alt} original`}
+              surfaceClassName={surfaceClass}
+            />
           </div>
           <div
-            className="flex flex-1 items-center justify-center overflow-hidden bg-gray-50"
+            className="flex flex-1 items-center justify-center overflow-hidden"
             style={{ width: `${100 - split}%` }}
           >
-            <img src={editedUrl} alt={alt} className={imageClass} />
+            <CutoutPreviewSurface
+              src={editedUrl}
+              alt={alt}
+              surfaceClassName={surfaceClass}
+            />
           </div>
         </div>
         <div className="flex items-center gap-2 border-t border-gray-200 bg-white px-3 py-2 text-xs text-gray-500">

@@ -25,6 +25,12 @@ import {
   findCutByRegionId,
 } from '../../lib/stage2Cutouts'
 import {
+  applyLayerOrder,
+  buildLayerStack,
+  findLayerObjectById,
+  getLayerObjectId,
+} from '../../lib/stage2Layers'
+import {
   STAGE2_CANVAS_HEIGHT,
   STAGE2_CANVAS_WIDTH,
   STAGE2_FONTS,
@@ -213,6 +219,8 @@ export default function ArrangeCanvas() {
   const stage2AddTextToken = useStage2Store((s) => s.stage2AddTextToken)
   const stage2AddCutoutToken = useStage2Store((s) => s.stage2AddCutoutToken)
   const stage2DeleteToken = useStage2Store((s) => s.stage2DeleteToken)
+  const stage2LayerOrderToken = useStage2Store((s) => s.stage2LayerOrderToken)
+  const stage2SelectLayerToken = useStage2Store((s) => s.stage2SelectLayerToken)
   const stage2TextFont = useStage2Store((s) => s.stage2TextFont)
   const stage2TextSize = useStage2Store((s) => s.stage2TextSize)
   const stage2TextColor = useStage2Store((s) => s.stage2TextColor)
@@ -233,6 +241,8 @@ export default function ArrangeCanvas() {
     (s) => s.setStage2ShapeTransparentFill,
   )
   const clearStage2PendingCutout = useStage2Store((s) => s.clearStage2PendingCutout)
+  const setStage2LayerStack = useStage2Store((s) => s.setStage2LayerStack)
+  const setStage2ActiveLayerId = useStage2Store((s) => s.setStage2ActiveLayerId)
 
   const getShapeFill = useCallback(() => {
     const state = useStage2Store.getState()
@@ -243,13 +253,21 @@ export default function ArrangeCanvas() {
     const canvas = fabricRef.current
     if (!canvas || !initializedRef.current) return
     saveStage2Canvas(JSON.stringify(canvas.toObject([...CANVAS_PROPS])))
-  }, [saveStage2Canvas])
+    setStage2LayerStack(buildLayerStack(canvas))
+  }, [saveStage2Canvas, setStage2LayerStack])
 
   useEffect(() => {
     const setPersist = useStage2Store.getState().setPersistLayoutSnapshot
     setPersist(persistCanvas)
     return () => setPersist(null)
   }, [persistCanvas])
+
+  const syncActiveLayerId = useCallback(
+    (obj: FabricObject | undefined) => {
+      setStage2ActiveLayerId(obj ? getLayerObjectId(obj) : null)
+    },
+    [setStage2ActiveLayerId],
+  )
 
   const deleteActiveSelection = useCallback(() => {
     const canvas = fabricRef.current
@@ -269,10 +287,11 @@ export default function ArrangeCanvas() {
     canvas.remove(target)
     canvas.discardActiveObject()
     setStage2Selection(null)
+    syncActiveLayerId(undefined)
     persistCanvas()
     canvas.requestRenderAll()
     return true
-  }, [persistCanvas, setStage2Selection])
+  }, [persistCanvas, setStage2Selection, syncActiveLayerId])
 
   const applyActiveTextStyle = useCallback(() => {
     const canvas = fabricRef.current
@@ -288,6 +307,7 @@ export default function ArrangeCanvas() {
 
   const syncObjectToStore = useCallback(
     (obj: FabricObject | undefined) => {
+      syncActiveLayerId(obj)
       if (!obj) {
         setStage2Selection(null)
         return
@@ -335,6 +355,7 @@ export default function ArrangeCanvas() {
       setStage2TextColor,
       setStage2TextFont,
       setStage2TextSize,
+      syncActiveLayerId,
     ],
   )
 
@@ -400,7 +421,10 @@ export default function ArrangeCanvas() {
     const onSelectionUpdated = (e: { selected?: FabricObject[] }) => {
       syncObjectToStore(e.selected?.[0])
     }
-    const onSelectionCleared = () => setStage2Selection(null)
+    const onSelectionCleared = () => {
+      setStage2Selection(null)
+      syncActiveLayerId(undefined)
+    }
     const onModified = (e: { target?: FabricObject }) => {
       const target = e.target
       if (target && getObjectKind(target) !== 'background') {
@@ -496,6 +520,7 @@ export default function ArrangeCanvas() {
     markStage2Initialized,
     persistCanvas,
     setStage2Selection,
+    syncActiveLayerId,
     syncObjectToStore,
   ])
 
@@ -594,6 +619,37 @@ export default function ArrangeCanvas() {
     if (!canvas || !initializedRef.current || stage2DeleteToken === 0) return
     deleteActiveSelection()
   }, [deleteActiveSelection, stage2DeleteToken])
+
+  useEffect(() => {
+    const canvas = fabricRef.current
+    if (!canvas || !initializedRef.current || stage2LayerOrderToken === 0) return
+
+    const action = useStage2Store.getState().stage2LayerOrderAction
+    const active = canvas.getActiveObject()
+    if (!action || !active || isLockedKind(getObjectKind(active))) return
+
+    if (applyLayerOrder(canvas, active, action)) {
+      canvas.requestRenderAll()
+      persistCanvas()
+      syncActiveLayerId(active)
+    }
+  }, [persistCanvas, stage2LayerOrderToken, syncActiveLayerId])
+
+  useEffect(() => {
+    const canvas = fabricRef.current
+    if (!canvas || !initializedRef.current || stage2SelectLayerToken === 0) return
+
+    const layerId = useStage2Store.getState().stage2SelectLayerId
+    if (!layerId) return
+
+    const target = findLayerObjectById(canvas, layerId)
+    if (!target || isLockedKind(getObjectKind(target))) return
+
+    ensureCanvasInteractivity(canvas, true)
+    canvas.setActiveObject(target)
+    syncObjectToStore(target)
+    canvas.requestRenderAll()
+  }, [stage2SelectLayerToken, syncObjectToStore])
 
   useEffect(() => {
     const canvas = fabricRef.current

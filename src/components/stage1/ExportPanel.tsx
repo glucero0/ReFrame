@@ -44,13 +44,14 @@ export default function ExportPanel() {
           }
           className="mt-1 w-full rounded border border-gray-300 px-2 py-1"
         >
-          <option value="png">PNG (transparent ovals)</option>
+          <option value="png">PNG (supports transparency)</option>
           <option value="jpg">JPG (white background)</option>
         </select>
       </label>
       {exportFormat === 'jpg' && (
         <p className="text-xs text-amber-700">
-          Oval cuts will use a white background when exported as JPG.
+          JPG cannot preserve transparency. Cuts with background removal still export
+          as PNG inside the ZIP.
         </p>
       )}
       <button

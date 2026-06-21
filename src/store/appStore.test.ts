@@ -20,6 +20,7 @@ const sampleCut: ProcessedCut = {
   blob: new Blob(),
   previewUrl: 'preview.png',
   originalPreviewUrl: 'original.png',
+  detectedBackgroundColor: null,
 }
 
 function resetStores(): void {

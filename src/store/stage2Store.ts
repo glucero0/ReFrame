@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Stage2LayerEntry, Stage2LayerOrderAction } from '../lib/stage2Layers'
 import type { Stage2Font, Stage2SelectionKind, Stage2Tool } from '../lib/stage2Types'
 import { DEFAULT_STAGE2_SHAPE, DEFAULT_STAGE2_TEXT } from '../lib/stage2Types'
 import { DEFAULT_GRID_SIZE } from '../lib/stage2Grid'
@@ -23,6 +24,12 @@ export type Stage2State = {
   stage2AddCutoutToken: number
   stage2DeleteToken: number
   stage2PendingCutoutId: string | null
+  stage2LayerStack: Stage2LayerEntry[]
+  stage2ActiveLayerId: string | null
+  stage2LayerOrderToken: number
+  stage2LayerOrderAction: Stage2LayerOrderAction | null
+  stage2SelectLayerToken: number
+  stage2SelectLayerId: string | null
   persistLayoutSnapshot: (() => void) | null
 
   saveStage2Canvas: (json: string) => void
@@ -44,6 +51,10 @@ export type Stage2State = {
   addAllCutoutsToLayout: () => void
   requestStage2DeleteSelection: () => void
   clearStage2PendingCutout: () => void
+  setStage2LayerStack: (layers: Stage2LayerEntry[]) => void
+  setStage2ActiveLayerId: (id: string | null) => void
+  requestStage2LayerOrder: (action: Stage2LayerOrderAction) => void
+  selectStage2Layer: (layerId: string) => void
   markStage2Initialized: () => void
   invalidateStage2Layout: () => void
   enterStage: () => void
@@ -72,6 +83,12 @@ export const useStage2Store = create<Stage2State>((set, get) => ({
   stage2AddCutoutToken: 0,
   stage2DeleteToken: 0,
   stage2PendingCutoutId: null,
+  stage2LayerStack: [],
+  stage2ActiveLayerId: null,
+  stage2LayerOrderToken: 0,
+  stage2LayerOrderAction: null,
+  stage2SelectLayerToken: 0,
+  stage2SelectLayerId: null,
   persistLayoutSnapshot: null,
 
   saveStage2Canvas: (json) => {
@@ -135,9 +152,28 @@ export const useStage2Store = create<Stage2State>((set, get) => ({
 
   clearStage2PendingCutout: () => set({ stage2PendingCutoutId: null }),
 
+  setStage2LayerStack: (layers) => set({ stage2LayerStack: layers }),
+
+  setStage2ActiveLayerId: (id) => set({ stage2ActiveLayerId: id }),
+
+  requestStage2LayerOrder: (action) =>
+    set((state) => ({
+      stage2LayerOrderAction: action,
+      stage2LayerOrderToken: state.stage2LayerOrderToken + 1,
+      stage2ActiveTool: 'select',
+    })),
+
+  selectStage2Layer: (layerId) =>
+    set((state) => ({
+      stage2SelectLayerId: layerId,
+      stage2SelectLayerToken: state.stage2SelectLayerToken + 1,
+      stage2ActiveTool: 'select',
+    })),
+
   markStage2Initialized: () => set({ stage2NeedsInit: false }),
 
-  invalidateStage2Layout: () => set({ stage2CanvasJson: null, stage2NeedsInit: false }),
+  invalidateStage2Layout: () =>
+    set({ stage2CanvasJson: null, stage2NeedsInit: false, stage2LayerStack: [], stage2ActiveLayerId: null }),
 
   enterStage: () =>
     set((state) => ({
@@ -145,6 +181,7 @@ export const useStage2Store = create<Stage2State>((set, get) => ({
       stage2ActiveTool: 'select',
       stage2Selection: null,
       stage2PendingCutoutId: null,
+      stage2ActiveLayerId: null,
     })),
 
   clearStage2Selection: () => set({ stage2Selection: null }),

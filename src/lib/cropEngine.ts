@@ -1,4 +1,5 @@
 import { applyFiltersToContext, canvasToBlob } from './filters'
+import { normalizeFilterSettings } from './filterDefaults'
 import type {
   EllipseRegion,
   ExportFormat,
@@ -7,6 +8,7 @@ import type {
   RectRegion,
   Region,
 } from './regionTypes'
+import type { Rgb } from './backgroundRemoval'
 import { DEFAULT_FILTERS } from './regionTypes'
 
 function clampRectToImage(
@@ -24,13 +26,21 @@ function clampRectToImage(
   return { x: sx, y: sy, w: Math.max(1, ex - sx), h: Math.max(1, ey - sy) }
 }
 
+function integerCanvasSize(w: number, h: number): { w: number; h: number } {
+  return {
+    w: Math.max(1, Math.round(w)),
+    h: Math.max(1, Math.round(h)),
+  }
+}
+
 async function cropRectRegion(
   image: HTMLImageElement,
   region: RectRegion,
   padding: number,
-  filters: FilterSettings,
+  rawFilters: FilterSettings,
   format: ExportFormat,
-): Promise<Blob> {
+): Promise<{ blob: Blob; detectedBackgroundColor: Rgb | null }> {
+  const filters = normalizeFilterSettings(rawFilters)
   const imgW = image.naturalWidth
   const imgH = image.naturalHeight
   const padded = clampRectToImage(
@@ -41,16 +51,17 @@ async function cropRectRegion(
     imgW,
     imgH,
   )
+  const { w, h } = integerCanvasSize(padded.w, padded.h)
 
   const canvas = document.createElement('canvas')
-  canvas.width = padded.w
-  canvas.height = padded.h
-  const ctx = canvas.getContext('2d')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d', { alpha: true })
   if (!ctx) throw new Error('Could not get canvas context')
 
-  if (format === 'jpg') {
+  if (format === 'jpg' && !filters.bgRemove) {
     ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, padded.w, padded.h)
+    ctx.fillRect(0, 0, w, h)
   }
 
   ctx.drawImage(
@@ -61,21 +72,24 @@ async function cropRectRegion(
     padded.h,
     0,
     0,
-    padded.w,
-    padded.h,
+    w,
+    h,
   )
 
-  applyFiltersToContext(ctx, padded.w, padded.h, filters)
-  return canvasToBlob(canvas, format)
+  const detectedBackgroundColor = applyFiltersToContext(ctx, w, h, filters)
+  const outputFormat = filters.bgRemove ? 'png' : format
+  const blob = await canvasToBlob(canvas, outputFormat)
+  return { blob, detectedBackgroundColor }
 }
 
 async function cropEllipseRegion(
   image: HTMLImageElement,
   region: EllipseRegion,
   padding: number,
-  filters: FilterSettings,
+  rawFilters: FilterSettings,
   format: ExportFormat,
-): Promise<Blob> {
+): Promise<{ blob: Blob; detectedBackgroundColor: Rgb | null }> {
+  const filters = normalizeFilterSettings(rawFilters)
   const imgW = image.naturalWidth
   const imgH = image.naturalHeight
   const rx = region.rx + padding
@@ -87,16 +101,17 @@ async function cropEllipseRegion(
   const top = Math.max(0, cy - ry)
   const right = Math.min(imgW, cx + rx)
   const bottom = Math.min(imgH, cy + ry)
-  const w = Math.max(1, right - left)
-  const h = Math.max(1, bottom - top)
+  const boundsW = Math.max(1, right - left)
+  const boundsH = Math.max(1, bottom - top)
+  const { w, h } = integerCanvasSize(boundsW, boundsH)
 
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext('2d', { alpha: true })
   if (!ctx) throw new Error('Could not get canvas context')
 
-  if (format === 'jpg') {
+  if (format === 'jpg' && !filters.bgRemove) {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, w, h)
   }
@@ -108,11 +123,13 @@ async function cropEllipseRegion(
   ctx.ellipse(localCx, localCy, rx, ry, 0, 0, Math.PI * 2)
   ctx.clip()
 
-  ctx.drawImage(image, left, top, w, h, 0, 0, w, h)
+  ctx.drawImage(image, left, top, boundsW, boundsH, 0, 0, w, h)
   ctx.restore()
 
-  applyFiltersToContext(ctx, w, h, filters)
-  return canvasToBlob(canvas, format === 'jpg' ? 'jpg' : 'png')
+  const detectedBackgroundColor = applyFiltersToContext(ctx, w, h, filters)
+  const outputFormat = filters.bgRemove ? 'png' : format === 'jpg' ? 'jpg' : 'png'
+  const blob = await canvasToBlob(canvas, outputFormat)
+  return { blob, detectedBackgroundColor }
 }
 
 export async function cropRegion(
@@ -121,7 +138,7 @@ export async function cropRegion(
   padding: number,
   filters: FilterSettings,
   format: ExportFormat,
-): Promise<Blob> {
+): Promise<{ blob: Blob; detectedBackgroundColor: Rgb | null }> {
   if (region.type === 'rect') {
     return cropRectRegion(image, region, padding, filters, format)
   }
@@ -140,19 +157,23 @@ export async function cropAllRegions(
   const cuts: ProcessedCut[] = []
 
   for (const region of regions) {
-    const filters = regionFilters[region.id] ?? DEFAULT_FILTERS
-    const effectiveFormat =
-      region.type === 'ellipse' && format === 'png' ? 'png' : format
-    const [blob, originalBlob] = await Promise.all([
+    const filters = normalizeFilterSettings(regionFilters[region.id] ?? DEFAULT_FILTERS)
+    const effectiveFormat = filters.bgRemove
+      ? 'png'
+      : region.type === 'ellipse' && format === 'png'
+        ? 'png'
+        : format
+    const [edited, original] = await Promise.all([
       cropRegion(image, region, padding, filters, effectiveFormat),
       cropRegion(image, region, padding, DEFAULT_FILTERS, effectiveFormat),
     ])
     cuts.push({
       regionId: region.id,
       label: region.label,
-      blob,
-      previewUrl: URL.createObjectURL(blob),
-      originalPreviewUrl: URL.createObjectURL(originalBlob),
+      blob: edited.blob,
+      previewUrl: URL.createObjectURL(edited.blob),
+      originalPreviewUrl: URL.createObjectURL(original.blob),
+      detectedBackgroundColor: edited.detectedBackgroundColor,
     })
   }
 

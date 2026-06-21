@@ -71,6 +71,7 @@ describe('findCutByRegionId', () => {
       blob: new Blob(),
       previewUrl: 'a.png',
       originalPreviewUrl: 'a-orig.png',
+      detectedBackgroundColor: null,
     },
     {
       regionId: 'b',
@@ -78,6 +79,7 @@ describe('findCutByRegionId', () => {
       blob: new Blob(),
       previewUrl: 'b.png',
       originalPreviewUrl: 'b-orig.png',
+      detectedBackgroundColor: null,
     },
   ]
 

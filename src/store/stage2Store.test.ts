@@ -65,6 +65,8 @@ describe('useStage2Store token actions', () => {
       useStage2Store.setState({
         stage2CanvasJson: '{"objects":[]}',
         stage2NeedsInit: true,
+        stage2LayerStack: [{ id: 'shape-1', kind: 'shape', label: 'Rectangle' }],
+        stage2ActiveLayerId: 'shape-1',
       })
 
       useStage2Store.getState().invalidateStage2Layout()
@@ -72,6 +74,19 @@ describe('useStage2Store token actions', () => {
       const state = useStage2Store.getState()
       expect(state.stage2CanvasJson).toBe(null)
       expect(state.stage2NeedsInit).toBe(false)
+      expect(state.stage2LayerStack).toEqual([])
+      expect(state.stage2ActiveLayerId).toBe(null)
+    })
+  })
+
+  describe('requestStage2LayerOrder', () => {
+    it('increments layer order token and records the action', () => {
+      useStage2Store.getState().requestStage2LayerOrder('back')
+
+      const state = useStage2Store.getState()
+      expect(state.stage2LayerOrderToken).toBe(1)
+      expect(state.stage2LayerOrderAction).toBe('back')
+      expect(state.stage2ActiveTool).toBe('select')
     })
   })
 })

@@ -1,5 +1,7 @@
 import { useStage1Store } from '../../store/stage1Store'
+import { normalizeFilterSettings } from '../../lib/regionTypes'
 import BeforeAfterCompare from './BeforeAfterCompare'
+import CutoutPreviewSurface from './CutoutPreviewSurface'
 
 type ImagePreviewerProps = {
   fillHeight?: boolean
@@ -11,9 +13,16 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
   const focusPreviewCut = useStage1Store((s) => s.focusPreviewCut)
   const isProcessing = useStage1Store((s) => s.isProcessing)
   const regions = useStage1Store((s) => s.regions)
+  const bgColorPickActive = useStage1Store((s) => s.bgColorPickActive)
+  const setBgColorPickActive = useStage1Store((s) => s.setBgColorPickActive)
+  const setRegionFilters = useStage1Store((s) => s.setRegionFilters)
+  const regionFilters = useStage1Store((s) => s.regionFilters)
 
   const current = processedCuts[previewIndex]
   const total = processedCuts.length
+  const bgRemoveActive =
+    current != null &&
+    normalizeFilterSettings(regionFilters[current.regionId] ?? {}).bgRemove
 
   const focusCut = (index: number) => {
     if (isProcessing || total === 0) return
@@ -70,6 +79,11 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
             Drag the divider above to resize this panel.
           </span>
         )}
+        {bgRemoveActive && (
+          <span className="text-xs text-gray-500">
+            Gray checkerboard shows through transparent areas.
+          </span>
+        )}
       </div>
 
       {current ? (
@@ -93,6 +107,14 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
             editedUrl={current.previewUrl}
             alt={`Cut ${current.label}`}
             fillHeight={fillHeight}
+            pickColorActive={bgColorPickActive}
+            onPickColor={(color) => {
+              setRegionFilters(current.regionId, {
+                bgRemove: true,
+                bgRemoveColor: color,
+              })
+              setBgColorPickActive(false)
+            }}
           />
         </div>
       ) : (
@@ -123,10 +145,10 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
               }`}
               title={`Preview cut ${cut.label}`}
             >
-              <img
+              <CutoutPreviewSurface
                 src={cut.previewUrl}
                 alt={`Cut ${cut.label}`}
-                className="h-12 w-12 object-contain"
+                surfaceClassName="h-12 w-12 object-contain"
               />
             </button>
           ))}

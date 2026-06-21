@@ -11,6 +11,7 @@ import {
   cloneRegions,
   DEFAULT_FILTERS,
   ensureRegionFilters,
+  normalizeFilterSettings,
 } from '../lib/regionTypes'
 import { useStage2Store } from './stage2Store'
 
@@ -35,6 +36,7 @@ export type Stage1State = {
   isProcessing: boolean
   undoStack: Region[][]
   zoom: number
+  bgColorPickActive: boolean
 
   setSourceImage: (image: HTMLImageElement, name?: string) => void
   clearSourceImage: () => void
@@ -50,6 +52,7 @@ export type Stage1State = {
   focusPreviewCut: (index: number) => void
   selectRegion: (regionId: string | null) => void
   setZoom: (zoom: number) => void
+  setBgColorPickActive: (active: boolean) => void
   removeRegion: (id: string) => void
   regeneratePreviews: () => Promise<void>
   cutApart: () => Promise<void>
@@ -69,6 +72,7 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   isProcessing: false,
   undoStack: [],
   zoom: 1,
+  bgColorPickActive: false,
 
   setSourceImage: (image, name = 'pasted-image.png') => {
     const { processedCuts } = get()
@@ -133,11 +137,13 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
 
   setRegionFilters: (regionId, partial) =>
     set((state) => {
-      const current = state.regionFilters[regionId] ?? DEFAULT_FILTERS
+      const current = normalizeFilterSettings(
+        state.regionFilters[regionId] ?? DEFAULT_FILTERS,
+      )
       return {
         regionFilters: {
           ...state.regionFilters,
-          [regionId]: { ...current, ...partial },
+          [regionId]: normalizeFilterSettings({ ...current, ...partial }),
         },
       }
     }),
@@ -146,7 +152,7 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
     set((state) => ({
       regionFilters: {
         ...state.regionFilters,
-        [regionId]: { ...DEFAULT_FILTERS },
+        [regionId]: normalizeFilterSettings(DEFAULT_FILTERS),
       },
     })),
 
@@ -188,6 +194,8 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   },
 
   setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(zoom, 4)) }),
+
+  setBgColorPickActive: (active) => set({ bgColorPickActive: active }),
 
   removeRegion: (id) => {
     const { regions, pushUndo, regionFilters, processedCuts, selectedRegionId } = get()

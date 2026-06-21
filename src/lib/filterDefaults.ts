@@ -1,3 +1,6 @@
+import type { Rgb } from './backgroundRemoval'
+import { isValidRgb, normalizeRgb } from './backgroundRemoval'
+
 export type FilterSettings = {
   brightness: number
   contrast: number
@@ -15,6 +18,10 @@ export type FilterSettings = {
   tintRed: number
   tintGreen: number
   tintBlue: number
+  bgRemove: boolean
+  bgRemoveTolerance: number
+  bgRemoveFromEdges: boolean
+  bgRemoveColor: Rgb | null
 }
 
 export const DEFAULT_FILTERS: FilterSettings = {
@@ -34,6 +41,22 @@ export const DEFAULT_FILTERS: FilterSettings = {
   tintRed: 0,
   tintGreen: 0,
   tintBlue: 0,
+  bgRemove: false,
+  bgRemoveTolerance: 35,
+  bgRemoveFromEdges: false,
+  bgRemoveColor: null,
+}
+
+export function normalizeFilterSettings(
+  settings: Partial<FilterSettings> | FilterSettings,
+): FilterSettings {
+  return {
+    ...DEFAULT_FILTERS,
+    ...settings,
+    bgRemoveColor: isValidRgb(settings.bgRemoveColor)
+      ? normalizeRgb(settings.bgRemoveColor)
+      : null,
+  }
 }
 
 export function hasActiveFilters(settings: FilterSettings): boolean {
@@ -53,6 +76,7 @@ export function hasActiveFilters(settings: FilterSettings): boolean {
     settings.vignette !== 0 ||
     settings.tintRed !== 0 ||
     settings.tintGreen !== 0 ||
-    settings.tintBlue !== 0
+    settings.tintBlue !== 0 ||
+    settings.bgRemove
   )
 }

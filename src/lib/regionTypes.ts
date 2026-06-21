@@ -25,6 +25,7 @@ export type CutTool = 'select' | 'rect' | 'ellipse'
 export type ExportFormat = 'png' | 'jpg'
 
 import { DEFAULT_FILTERS } from './filterDefaults'
+import type { Rgb } from './backgroundRemoval'
 
 export type FilterSettings = import('./filterDefaults').FilterSettings
 
@@ -34,9 +35,10 @@ export type ProcessedCut = {
   blob: Blob
   previewUrl: string
   originalPreviewUrl: string
+  detectedBackgroundColor: Rgb | null
 }
 
-export { DEFAULT_FILTERS, hasActiveFilters } from './filterDefaults'
+export { DEFAULT_FILTERS, hasActiveFilters, normalizeFilterSettings } from './filterDefaults'
 
 export function createRegionId(): string {
   return crypto.randomUUID()
@@ -88,7 +90,10 @@ export function cloneRegions(regions: Region[]): Region[] {
 }
 
 export function cloneFilterSettings(settings: FilterSettings): FilterSettings {
-  return { ...settings }
+  return {
+    ...settings,
+    bgRemoveColor: settings.bgRemoveColor ? { ...settings.bgRemoveColor } : null,
+  }
 }
 
 export function ensureRegionFilters(

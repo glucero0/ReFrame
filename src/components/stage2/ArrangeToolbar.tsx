@@ -13,6 +13,10 @@ export default function ArrangeToolbar() {
   const requestStage2Rearrange = useStage2Store((s) => s.requestStage2Rearrange)
   const requestStage2AddText = useStage2Store((s) => s.requestStage2AddText)
   const requestStage2DeleteSelection = useStage2Store((s) => s.requestStage2DeleteSelection)
+  const requestStage2LayerOrder = useStage2Store((s) => s.requestStage2LayerOrder)
+  const selectStage2Layer = useStage2Store((s) => s.selectStage2Layer)
+  const stage2LayerStack = useStage2Store((s) => s.stage2LayerStack)
+  const stage2ActiveLayerId = useStage2Store((s) => s.stage2ActiveLayerId)
   const stage2Selection = useStage2Store((s) => s.stage2Selection)
   const stage2TextFont = useStage2Store((s) => s.stage2TextFont)
   const stage2TextSize = useStage2Store((s) => s.stage2TextSize)
@@ -41,6 +45,14 @@ export default function ArrangeToolbar() {
     stage2ActiveTool === tool
       ? 'bg-blue-600 text-white'
       : 'bg-white text-gray-800 hover:bg-gray-50'
+
+  const layerKindLabel = (kind: (typeof stage2LayerStack)[number]['kind']) => {
+    if (kind === 'cutout') return 'Cutout'
+    if (kind === 'text') return 'Text'
+    return 'Shape'
+  }
+
+  const hasLayerSelection = stage2ActiveLayerId !== null
 
   return (
     <div className="space-y-5">
@@ -164,6 +176,74 @@ export default function ArrangeToolbar() {
         >
           Delete selection
         </button>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          Layers
+        </h2>
+        <p className="text-xs text-gray-500">
+          Front layers draw on top. Send shapes behind cutouts so fill color shows
+          through transparent areas.
+        </p>
+        {stage2LayerStack.length === 0 ? (
+          <p className="text-xs text-gray-400">No layers yet.</p>
+        ) : (
+          <ul className="max-h-40 space-y-1 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-1">
+            {stage2LayerStack.map((layer) => (
+              <li key={layer.id}>
+                <button
+                  type="button"
+                  className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
+                    stage2ActiveLayerId === layer.id
+                      ? 'bg-blue-100 text-blue-900'
+                      : 'bg-white text-gray-800 hover:bg-gray-100'
+                  }`}
+                  onClick={() => selectStage2Layer(layer.id)}
+                >
+                  <span className="truncate">{layer.label}</span>
+                  <span className="ml-2 shrink-0 text-[10px] uppercase text-gray-400">
+                    {layerKindLabel(layer.kind)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={!hasLayerSelection}
+            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+            onClick={() => requestStage2LayerOrder('front')}
+          >
+            To front
+          </button>
+          <button
+            type="button"
+            disabled={!hasLayerSelection}
+            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+            onClick={() => requestStage2LayerOrder('back')}
+          >
+            To back
+          </button>
+          <button
+            type="button"
+            disabled={!hasLayerSelection}
+            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+            onClick={() => requestStage2LayerOrder('forward')}
+          >
+            Forward
+          </button>
+          <button
+            type="button"
+            disabled={!hasLayerSelection}
+            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40"
+            onClick={() => requestStage2LayerOrder('backward')}
+          >
+            Backward
+          </button>
+        </div>
       </div>
 
       {stage2Selection === 'text' && (
