@@ -35,6 +35,7 @@ function FilterSlider({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
+        onInput={(e) => onChange(Number(e.currentTarget.value))}
         className="w-full"
       />
     </label>

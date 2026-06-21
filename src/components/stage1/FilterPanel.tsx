@@ -11,7 +11,6 @@ export default function FilterPanel() {
   const setRegionFilters = useStage1Store((s) => s.setRegionFilters)
   const resetRegionFilters = useStage1Store((s) => s.resetRegionFilters)
   const processedCuts = useStage1Store((s) => s.processedCuts)
-  const regeneratePreviews = useStage1Store((s) => s.regeneratePreviews)
   const bgColorPickActive = useStage1Store((s) => s.bgColorPickActive)
   const setBgColorPickActive = useStage1Store((s) => s.setBgColorPickActive)
 
@@ -60,14 +59,6 @@ export default function FilterPanel() {
   const updateFilters = (partial: Partial<typeof filters>) => {
     if (!activeRegionId) return
     setRegionFilters(activeRegionId, partial)
-    if (
-      'bgRemove' in partial ||
-      'bgRemoveTolerance' in partial ||
-      'bgRemoveFromEdges' in partial ||
-      'bgRemoveColor' in partial
-    ) {
-      void regeneratePreviews()
-    }
   }
 
   return (
@@ -93,6 +84,7 @@ export default function FilterPanel() {
           value={filters.brightness}
           disabled={!activeRegionId}
           onChange={(e) => updateFilters({ brightness: Number(e.target.value) })}
+          onInput={(e) => updateFilters({ brightness: Number(e.currentTarget.value) })}
           className="w-full"
         />
       </label>
@@ -105,6 +97,7 @@ export default function FilterPanel() {
           value={filters.contrast}
           disabled={!activeRegionId}
           onChange={(e) => updateFilters({ contrast: Number(e.target.value) })}
+          onInput={(e) => updateFilters({ contrast: Number(e.currentTarget.value) })}
           className="w-full"
         />
       </label>
@@ -195,6 +188,16 @@ export default function FilterPanel() {
                   disabled={!activeRegionId}
                   onChange={(e) => {
                     const hex = e.target.value
+                    updateFilters({
+                      bgRemoveColor: {
+                        r: Number.parseInt(hex.slice(1, 3), 16),
+                        g: Number.parseInt(hex.slice(3, 5), 16),
+                        b: Number.parseInt(hex.slice(5, 7), 16),
+                      },
+                    })
+                  }}
+                  onInput={(e) => {
+                    const hex = e.currentTarget.value
                     updateFilters({
                       bgRemoveColor: {
                         r: Number.parseInt(hex.slice(1, 3), 16),
