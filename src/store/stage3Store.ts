@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ImageExportFormat, PublishDpi, SizePresetId } from '../lib/stage3Types'
+import { MAX_EXPORT_DIMENSION } from '../lib/limits'
 
 export type Stage3State = {
   sizePresetId: SizePresetId
@@ -28,10 +29,13 @@ export const useStage3Store = create<Stage3State>((set) => ({
 
   setSizePresetId: (id) => set({ sizePresetId: id }),
 
-  setCustomWidth: (width) => set({ customWidth: Math.max(1, Math.round(width)) }),
+  setCustomWidth: (width) =>
+    set({ customWidth: Math.max(1, Math.min(MAX_EXPORT_DIMENSION, Math.round(width))) }),
 
   setCustomHeight: (height) =>
-    set({ customHeight: Math.max(1, Math.round(height)) }),
+    set({
+      customHeight: Math.max(1, Math.min(MAX_EXPORT_DIMENSION, Math.round(height))),
+    }),
 
   setDpi: (dpi) => set({ dpi }),
 

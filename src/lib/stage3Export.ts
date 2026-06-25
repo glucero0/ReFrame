@@ -5,6 +5,7 @@ import {
   type PublishDpi,
   type SizePresetId,
 } from './stage3Types'
+import { clampExportDimensions } from './limits'
 
 export type ExportDimensions = {
   pixelWidth: number
@@ -14,6 +15,23 @@ export type ExportDimensions = {
 }
 
 const PT_PER_INCH = 72
+
+function finalizeExportDimensions(
+  pixelWidth: number,
+  pixelHeight: number,
+  pageWidthPt?: number,
+  pageHeightPt?: number,
+): ExportDimensions {
+  const clamped = clampExportDimensions(pixelWidth, pixelHeight)
+  if (pageWidthPt != null && pageHeightPt != null) {
+    return {
+      ...clamped,
+      pageWidthPt,
+      pageHeightPt,
+    }
+  }
+  return clamped
+}
 
 export function findSizePreset(id: SizePresetId) {
   return ALL_SIZE_PRESETS.find((preset) => preset.id === id)
@@ -32,36 +50,36 @@ export function computeExportDimensions(
     const pixelWidth = Math.max(1, Math.round(customWidth))
     const pixelHeight = Math.max(1, Math.round(customHeight))
     if (forPdf) {
-      return {
+      return finalizeExportDimensions(
         pixelWidth,
         pixelHeight,
-        pageWidthPt: (pixelWidth / dpi) * PT_PER_INCH,
-        pageHeightPt: (pixelHeight / dpi) * PT_PER_INCH,
-      }
+        (pixelWidth / dpi) * PT_PER_INCH,
+        (pixelHeight / dpi) * PT_PER_INCH,
+      )
     }
-    return { pixelWidth, pixelHeight }
+    return finalizeExportDimensions(pixelWidth, pixelHeight)
   }
 
   if (!preset) {
-    return { pixelWidth: LAYOUT_WIDTH, pixelHeight: LAYOUT_HEIGHT }
+    return finalizeExportDimensions(LAYOUT_WIDTH, LAYOUT_HEIGHT)
   }
 
   if (preset.kind === 'pixels' && preset.widthPx && preset.heightPx) {
-    return { pixelWidth: preset.widthPx, pixelHeight: preset.heightPx }
+    return finalizeExportDimensions(preset.widthPx, preset.heightPx)
   }
 
   if (preset.kind === 'print' && preset.widthIn && preset.heightIn) {
     const pixelWidth = Math.max(1, Math.round(preset.widthIn * dpi))
     const pixelHeight = Math.max(1, Math.round(preset.heightIn * dpi))
-    return {
+    return finalizeExportDimensions(
       pixelWidth,
       pixelHeight,
-      pageWidthPt: preset.widthIn * PT_PER_INCH,
-      pageHeightPt: preset.heightIn * PT_PER_INCH,
-    }
+      preset.widthIn * PT_PER_INCH,
+      preset.heightIn * PT_PER_INCH,
+    )
   }
 
-  return { pixelWidth: LAYOUT_WIDTH, pixelHeight: LAYOUT_HEIGHT }
+  return finalizeExportDimensions(LAYOUT_WIDTH, LAYOUT_HEIGHT)
 }
 
 /** Scale-to-fit letterbox placement for a layout rendered at native size. */

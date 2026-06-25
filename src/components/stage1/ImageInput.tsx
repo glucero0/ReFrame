@@ -13,8 +13,8 @@ export default function ImageInput() {
       try {
         const image = await loadImageFromFile(file)
         setSourceImage(image, file.name)
-      } catch {
-        alert('Could not load that image file.')
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Could not load that image file.')
       }
     },
     [setSourceImage],
@@ -23,10 +23,14 @@ export default function ImageInput() {
   useEffect(() => {
     const onPaste = async (event: ClipboardEvent) => {
       if (!event.clipboardData) return
-      const image = await loadImageFromClipboard(event.clipboardData)
-      if (image) {
-        event.preventDefault()
-        setSourceImage(image, 'pasted-image.png')
+      try {
+        const image = await loadImageFromClipboard(event.clipboardData)
+        if (image) {
+          event.preventDefault()
+          setSourceImage(image, 'pasted-image.png')
+        }
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Could not load pasted image.')
       }
     }
 
@@ -58,7 +62,8 @@ export default function ImageInput() {
         Choose image file
       </button>
       <p className="text-xs text-gray-500">
-        Or paste an image from your clipboard (Ctrl+V).
+        Or paste an image from your clipboard (Ctrl+V). Max 25 MB, 8192 px per side,
+        16.8 MP.
       </p>
       {sourceImage && (
         <p className="truncate text-xs text-gray-600">

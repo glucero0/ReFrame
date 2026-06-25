@@ -10,7 +10,10 @@ import {
   type PublishDpi,
   type SizePresetId,
 } from '../../lib/stage3Types'
-import { computeExportDimensions } from '../../lib/stage3Export'
+import {
+  computeExportDimensions,
+} from '../../lib/stage3Export'
+import { MAX_EXPORT_DIMENSION, MAX_EXPORT_PIXELS } from '../../lib/limits'
 import { downloadLayoutImage, downloadLayoutPdf } from '../../lib/stage3Download'
 import { STAGE2_CANVAS_HEIGHT, STAGE2_CANVAS_WIDTH } from '../../lib/stage2Types'
 
@@ -122,6 +125,7 @@ export default function PublishToolbar({
               <input
                 type="number"
                 min={1}
+                max={MAX_EXPORT_DIMENSION}
                 value={customWidth}
                 onChange={(e) => setCustomWidth(Number(e.target.value) || 1)}
                 className="mt-1 w-full rounded border border-gray-300 px-2 py-1"
@@ -132,12 +136,20 @@ export default function PublishToolbar({
               <input
                 type="number"
                 min={1}
+                max={MAX_EXPORT_DIMENSION}
                 value={customHeight}
                 onChange={(e) => setCustomHeight(Number(e.target.value) || 1)}
                 className="mt-1 w-full rounded border border-gray-300 px-2 py-1"
               />
             </label>
           </div>
+        )}
+
+        {sizePresetId === 'custom' && (
+          <p className="text-xs text-gray-500">
+            Custom exports are capped at {MAX_EXPORT_DIMENSION} px per side and{' '}
+            {(MAX_EXPORT_PIXELS / 1_000_000).toFixed(1)} MP total.
+          </p>
         )}
 
         <label className="block text-sm">
