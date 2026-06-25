@@ -10,6 +10,7 @@ import {
   type CutTool,
   type Region,
 } from '../../lib/regionTypes'
+import { MAX_CUT_REGIONS } from '../../lib/limits'
 import type { SegmentationCanvasRefs } from './useSegmentationCanvas'
 
 export function useRegionDrawing(
@@ -136,9 +137,16 @@ export function useRegionDrawing(
       }
 
       if (displayRegion) {
+        const currentRegions = useStage1Store.getState().regions
+        if (currentRegions.length >= MAX_CUT_REGIONS) {
+          alert(`Maximum of ${MAX_CUT_REGIONS} cut regions reached.`)
+          canvas.requestRenderAll()
+          return
+        }
+
         pushUndo()
         const sourceRegion = scaleRegionToSource(displayRegion, scale)
-        setRegions([...useStage1Store.getState().regions, sourceRegion])
+        setRegions([...currentRegions, sourceRegion])
         selectRegion(sourceRegion.id)
       }
 

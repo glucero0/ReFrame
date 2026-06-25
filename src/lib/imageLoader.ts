@@ -1,7 +1,13 @@
+import { assertFileWithinLimits, assertImageWithinLimits } from './limits'
+
 export async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  assertFileWithinLimits(file.size)
+
   const url = URL.createObjectURL(file)
   try {
-    return await loadImageFromUrl(url)
+    const image = await loadImageFromUrl(url)
+    assertImageWithinLimits(image.naturalWidth, image.naturalHeight)
+    return image
   } finally {
     URL.revokeObjectURL(url)
   }
@@ -33,6 +39,8 @@ export async function loadImageFromClipboard(
 }
 
 export function imageToObjectUrl(image: HTMLImageElement): string {
+  assertImageWithinLimits(image.naturalWidth, image.naturalHeight)
+
   const canvas = document.createElement('canvas')
   canvas.width = image.naturalWidth
   canvas.height = image.naturalHeight
