@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import type { Rgb } from '../../lib/backgroundRemoval'
 import CutoutPreviewSurface from './CutoutPreviewSurface'
 
@@ -9,15 +9,17 @@ type BeforeAfterCompareProps = {
   fillHeight?: boolean
   pickColorActive?: boolean
   onPickColor?: (color: Rgb) => void
+  registerEditedAsDragTarget?: boolean
 }
 
-export default function BeforeAfterCompare({
+function BeforeAfterCompare({
   originalUrl,
   editedUrl,
   alt,
   fillHeight = false,
   pickColorActive = false,
   onPickColor,
+  registerEditedAsDragTarget = false,
 }: BeforeAfterCompareProps) {
   const [compare, setCompare] = useState(false)
   const [split, setSplit] = useState(50)
@@ -90,6 +92,7 @@ export default function BeforeAfterCompare({
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
             <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-1.5">
@@ -107,6 +110,7 @@ export default function BeforeAfterCompare({
             src={editedUrl}
             alt={alt}
             surfaceClassName={surfaceClass}
+            registerAsDragTarget={registerEditedAsDragTarget}
           />
         </div>
         <div className="mt-2">{compareCheckbox}</div>
@@ -136,6 +140,7 @@ export default function BeforeAfterCompare({
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
           </div>
@@ -182,6 +187,7 @@ export default function BeforeAfterCompare({
               src={editedUrl}
               alt={alt}
               surfaceClassName={surfaceClass}
+              registerAsDragTarget={registerEditedAsDragTarget}
             />
           </div>
         </div>
@@ -203,3 +209,5 @@ export default function BeforeAfterCompare({
     </div>
   )
 }
+
+export default memo(BeforeAfterCompare)

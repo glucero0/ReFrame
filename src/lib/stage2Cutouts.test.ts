@@ -72,6 +72,7 @@ describe('findCutByRegionId', () => {
       previewUrl: 'a.png',
       originalPreviewUrl: 'a-orig.png',
       detectedBackgroundColor: null,
+      bakedRotation: 0,
     },
     {
       regionId: 'b',
@@ -80,6 +81,7 @@ describe('findCutByRegionId', () => {
       previewUrl: 'b.png',
       originalPreviewUrl: 'b-orig.png',
       detectedBackgroundColor: null,
+      bakedRotation: 0,
     },
   ]
 

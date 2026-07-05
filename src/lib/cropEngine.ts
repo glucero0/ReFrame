@@ -1,4 +1,5 @@
 import { applyFiltersToContext, canvasToBlob } from './filters'
+import { rotateCanvas } from './imageRotation'
 import { normalizeFilterSettings } from './filterDefaults'
 import type {
   EllipseRegion,
@@ -78,7 +79,10 @@ async function cropRectRegion(
 
   const detectedBackgroundColor = applyFiltersToContext(ctx, w, h, filters)
   const outputFormat = filters.bgRemove ? 'png' : format
-  const blob = await canvasToBlob(canvas, outputFormat)
+  const rotated = rotateCanvas(canvas, region.rotation, {
+    jpgOpaque: outputFormat === 'jpg',
+  })
+  const blob = await canvasToBlob(rotated, outputFormat)
   return { blob, detectedBackgroundColor }
 }
 
@@ -128,7 +132,10 @@ async function cropEllipseRegion(
 
   const detectedBackgroundColor = applyFiltersToContext(ctx, w, h, filters)
   const outputFormat = filters.bgRemove ? 'png' : format === 'jpg' ? 'jpg' : 'png'
-  const blob = await canvasToBlob(canvas, outputFormat)
+  const rotated = rotateCanvas(canvas, region.rotation, {
+    jpgOpaque: outputFormat === 'jpg',
+  })
+  const blob = await canvasToBlob(rotated, outputFormat)
   return { blob, detectedBackgroundColor }
 }
 
@@ -174,6 +181,7 @@ export async function cropAllRegions(
       previewUrl: URL.createObjectURL(edited.blob),
       originalPreviewUrl: URL.createObjectURL(original.blob),
       detectedBackgroundColor: edited.detectedBackgroundColor,
+      bakedRotation: region.rotation,
     })
   }
 
@@ -184,5 +192,38 @@ export function revokeProcessedCuts(cuts: ProcessedCut[]): void {
   for (const cut of cuts) {
     URL.revokeObjectURL(cut.previewUrl)
     URL.revokeObjectURL(cut.originalPreviewUrl)
+  }
+}
+
+export function revokeProcessedCut(cut: ProcessedCut): void {
+  URL.revokeObjectURL(cut.previewUrl)
+  URL.revokeObjectURL(cut.originalPreviewUrl)
+}
+
+export async function cropSingleProcessedCut(
+  image: HTMLImageElement,
+  region: Region,
+  padding: number,
+  regionFilters: Record<string, FilterSettings>,
+  format: ExportFormat,
+): Promise<ProcessedCut> {
+  const filters = normalizeFilterSettings(regionFilters[region.id] ?? DEFAULT_FILTERS)
+  const effectiveFormat = filters.bgRemove
+    ? 'png'
+    : region.type === 'ellipse' && format === 'png'
+      ? 'png'
+      : format
+  const [edited, original] = await Promise.all([
+    cropRegion(image, region, padding, filters, effectiveFormat),
+    cropRegion(image, region, padding, DEFAULT_FILTERS, effectiveFormat),
+  ])
+  return {
+    regionId: region.id,
+    label: region.label,
+    blob: edited.blob,
+    previewUrl: URL.createObjectURL(edited.blob),
+    originalPreviewUrl: URL.createObjectURL(original.blob),
+    detectedBackgroundColor: edited.detectedBackgroundColor,
+    bakedRotation: region.rotation,
   }
 }

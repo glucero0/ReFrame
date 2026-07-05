@@ -15,6 +15,7 @@ describe('paddedRegionToDisplay', () => {
     w: 100,
     h: 50,
     label: 1,
+    rotation: 0,
   }
 
   const ellipse: Region = {
@@ -25,6 +26,7 @@ describe('paddedRegionToDisplay', () => {
     rx: 40,
     ry: 30,
     label: 2,
+    rotation: 0,
   }
 
   it('expands rect bounds by padding in source space then scales', () => {
@@ -67,6 +69,7 @@ describe('scale round-trip', () => {
     w: 80,
     h: 40,
     label: 1,
+    rotation: 0,
   }
 
   const ellipse: Region = {
@@ -77,6 +80,7 @@ describe('scale round-trip', () => {
     rx: 25,
     ry: 15,
     label: 2,
+    rotation: 0,
   }
 
   it.each([
