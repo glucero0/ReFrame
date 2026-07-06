@@ -6,6 +6,7 @@ export type RectRegion = {
   w: number
   h: number
   label: number
+  rotation: number
 }
 
 export type EllipseRegion = {
@@ -16,6 +17,7 @@ export type EllipseRegion = {
   rx: number
   ry: number
   label: number
+  rotation: number
 }
 
 export type Region = RectRegion | EllipseRegion
@@ -36,6 +38,8 @@ export type ProcessedCut = {
   previewUrl: string
   originalPreviewUrl: string
   detectedBackgroundColor: Rgb | null
+  /** Rotation baked into blob/previewUrl at generation time. */
+  bakedRotation: number
 }
 
 export { DEFAULT_FILTERS, hasActiveFilters, normalizeFilterSettings } from './filterDefaults'
@@ -64,6 +68,7 @@ export function regionFromRect(
     w: Math.abs(w),
     h: Math.abs(h),
     label,
+    rotation: 0,
   }
 }
 
@@ -82,11 +87,40 @@ export function regionFromEllipse(
     rx: Math.abs(rx),
     ry: Math.abs(ry),
     label,
+    rotation: 0,
   }
 }
 
 export function cloneRegions(regions: Region[]): Region[] {
   return regions.map((r) => ({ ...r }))
+}
+
+/** Geometry-only snapshot for live-preview invalidation (rotation is handled separately). */
+export function regionGeometrySnapshot(region: Region): Record<string, string | number> {
+  if (region.type === 'rect') {
+    return {
+      id: region.id,
+      type: region.type,
+      x: region.x,
+      y: region.y,
+      w: region.w,
+      h: region.h,
+      label: region.label,
+    }
+  }
+  return {
+    id: region.id,
+    type: region.type,
+    cx: region.cx,
+    cy: region.cy,
+    rx: region.rx,
+    ry: region.ry,
+    label: region.label,
+  }
+}
+
+export function regionsGeometryKey(regions: Region[]): string {
+  return regions.map((r) => JSON.stringify(regionGeometrySnapshot(r))).join('|')
 }
 
 export function cloneFilterSettings(settings: FilterSettings): FilterSettings {

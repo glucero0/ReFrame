@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useStage1Store } from '../store/stage1Store'
+import { regionsGeometryKey } from '../lib/regionTypes'
+import { isPreviewRegenPaused } from '../lib/previewInteractionGate'
 
 const PREVIEW_THROTTLE_MS = 100
 
@@ -12,7 +14,7 @@ export function useLivePreview() {
   const exportFormat = useStage1Store((s) => s.exportFormat)
   const regeneratePreviews = useStage1Store((s) => s.regeneratePreviews)
 
-  const regionsKey = regions.map((r) => JSON.stringify(r)).join('|')
+  const regionsKey = regionsGeometryKey(regions)
   const filtersKey = JSON.stringify(regionFilters)
 
   const lastRunRef = useRef(0)
@@ -24,12 +26,15 @@ export function useLivePreview() {
       timerRef.current = null
     }
 
+    if (isPreviewRegenPaused()) return
+
     if (!sourceImage || regions.length === 0) {
       void regeneratePreviews()
       return
     }
 
     const run = () => {
+      if (isPreviewRegenPaused()) return
       lastRunRef.current = Date.now()
       timerRef.current = null
       void regeneratePreviews()

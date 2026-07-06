@@ -6,6 +6,7 @@ import {
   nextRegionLabel,
   regionFromEllipse,
   regionFromRect,
+  regionsGeometryKey,
   type Region,
 } from './regionTypes'
 
@@ -26,6 +27,7 @@ describe('regionFromRect', () => {
       w: 30,
       h: 40,
       label: 1,
+      rotation: 0,
     })
   })
 
@@ -38,6 +40,7 @@ describe('regionFromRect', () => {
       w: 100,
       h: 50,
       label: 2,
+      rotation: 0,
     })
   })
 })
@@ -53,6 +56,7 @@ describe('regionFromEllipse', () => {
       rx: 25,
       ry: 15,
       label: 3,
+      rotation: 0,
     })
   })
 })
@@ -64,8 +68,8 @@ describe('nextRegionLabel', () => {
 
   it('returns max label plus one', () => {
     const regions: Region[] = [
-      { id: 'a', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 1 },
-      { id: 'b', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 5 },
+      { id: 'a', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 1, rotation: 0 },
+      { id: 'b', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 5, rotation: 0 },
     ]
     expect(nextRegionLabel(regions)).toBe(6)
   })
@@ -74,7 +78,7 @@ describe('nextRegionLabel', () => {
 describe('cloneRegions', () => {
   it('returns shallow copies', () => {
     const regions: Region[] = [
-      { id: 'a', type: 'rect', x: 0, y: 0, w: 10, h: 10, label: 1 },
+      { id: 'a', type: 'rect', x: 0, y: 0, w: 10, h: 10, label: 1, rotation: 0 },
     ]
     const cloned = cloneRegions(regions)
     expect(cloned).toEqual(regions)
@@ -83,10 +87,22 @@ describe('cloneRegions', () => {
   })
 })
 
+describe('regionsGeometryKey', () => {
+  it('ignores rotation when building the geometry key', () => {
+    const base: Region[] = [
+      { id: 'a', type: 'rect', x: 0, y: 0, w: 10, h: 10, label: 1, rotation: 0 },
+    ]
+    const rotated: Region[] = [
+      { id: 'a', type: 'rect', x: 0, y: 0, w: 10, h: 10, label: 1, rotation: 90 },
+    ]
+    expect(regionsGeometryKey(base)).toBe(regionsGeometryKey(rotated))
+  })
+})
+
 describe('ensureRegionFilters', () => {
   const regions: Region[] = [
-    { id: 'keep', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 1 },
-    { id: 'new', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 2 },
+    { id: 'keep', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 1, rotation: 0 },
+    { id: 'new', type: 'rect', x: 0, y: 0, w: 1, h: 1, label: 2, rotation: 0 },
   ]
 
   it('preserves existing filter settings for known regions', () => {

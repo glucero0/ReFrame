@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import { cropAllRegions, revokeProcessedCuts } from '../lib/cropEngine'
+import {
+  cropAllRegions,
+  cropSingleProcessedCut,
+  revokeProcessedCut,
+  revokeProcessedCuts,
+} from '../lib/cropEngine'
+import { normalizeRotation } from '../lib/imageRotation'
+import { isPreviewRegenPaused, preloadPreviewUrl } from '../lib/previewInteractionGate'
 import type {
   CutTool,
   ExportFormat,
@@ -37,6 +44,7 @@ export type Stage1State = {
   undoStack: Region[][]
   zoom: number
   bgColorPickActive: boolean
+  filterSliderDragging: boolean
 
   setSourceImage: (image: HTMLImageElement, name?: string) => void
   clearSourceImage: () => void
@@ -47,14 +55,17 @@ export type Stage1State = {
   setActiveTool: (tool: CutTool) => void
   setRegionFilters: (regionId: string, filters: Partial<FilterSettings>) => void
   resetRegionFilters: (regionId: string) => void
+  setRegionRotation: (regionId: string, rotation: number, options?: { skipUndo?: boolean; deferPreview?: boolean }) => void
   setExportFormat: (format: ExportFormat) => void
   setPreviewIndex: (index: number) => void
   focusPreviewCut: (index: number) => void
   selectRegion: (regionId: string | null) => void
   setZoom: (zoom: number) => void
   setBgColorPickActive: (active: boolean) => void
+  setFilterSliderDragging: (dragging: boolean) => void
   removeRegion: (id: string) => void
   regeneratePreviews: () => Promise<void>
+  regenerateCutPreview: (regionId: string) => Promise<void>
   cutApart: () => Promise<void>
 }
 
@@ -73,6 +84,7 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   undoStack: [],
   zoom: 1,
   bgColorPickActive: false,
+  filterSliderDragging: false,
 
   setSourceImage: (image, name = 'pasted-image.png') => {
     const { processedCuts } = get()
@@ -156,6 +168,26 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
       },
     })),
 
+  setRegionRotation: (regionId, rotation, options) => {
+    const { regions, pushUndo } = get()
+    const index = regions.findIndex((r) => r.id === regionId)
+    if (index < 0) return
+
+    if (!options?.skipUndo) {
+      pushUndo()
+    }
+
+    const normalized = normalizeRotation(rotation)
+    const nextRegions = regions.map((r) =>
+      r.id === regionId ? { ...r, rotation: normalized } : r,
+    )
+    set({ regions: nextRegions })
+
+    if (!options?.deferPreview) {
+      void get().regenerateCutPreview(regionId)
+    }
+  },
+
   setExportFormat: (format) => set({ exportFormat: format }),
 
   setPreviewIndex: (index) => {
@@ -197,6 +229,8 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
 
   setBgColorPickActive: (active) => set({ bgColorPickActive: active }),
 
+  setFilterSliderDragging: (dragging) => set({ filterSliderDragging: dragging }),
+
   removeRegion: (id) => {
     const { regions, pushUndo, regionFilters, processedCuts, selectedRegionId } = get()
     pushUndo()
@@ -217,6 +251,8 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   },
 
   regeneratePreviews: async () => {
+    if (isPreviewRegenPaused()) return
+
     const {
       sourceImage,
       regions,
@@ -268,6 +304,73 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
       if (generation === previewGeneration) {
         set({ isProcessing: false })
       }
+    }
+  },
+
+  regenerateCutPreview: async (regionId) => {
+    if (isPreviewRegenPaused()) return
+
+    const { sourceImage, regions, padding, regionFilters, exportFormat, processedCuts } = get()
+    const region = regions.find((r) => r.id === regionId)
+    if (!sourceImage || !region) return
+
+    const index = processedCuts.findIndex((cut) => cut.regionId === regionId)
+    if (index < 0) return
+
+    const rotationAtStart = region.rotation
+
+    try {
+      const newCut = await cropSingleProcessedCut(
+        sourceImage,
+        region,
+        padding,
+        regionFilters,
+        exportFormat,
+      )
+
+      const latest = get()
+      const latestRegion = latest.regions.find((r) => r.id === regionId)
+      const latestIndex = latest.processedCuts.findIndex((cut) => cut.regionId === regionId)
+      if (
+        !latestRegion ||
+        latestRegion.rotation !== rotationAtStart ||
+        latestIndex < 0
+      ) {
+        revokeProcessedCut(newCut)
+        return
+      }
+
+      try {
+        await Promise.all([
+          preloadPreviewUrl(newCut.previewUrl),
+          preloadPreviewUrl(newCut.originalPreviewUrl),
+        ])
+      } catch {
+        revokeProcessedCut(newCut)
+        return
+      }
+
+      const afterPreload = get()
+      const afterRegion = afterPreload.regions.find((r) => r.id === regionId)
+      const afterIndex = afterPreload.processedCuts.findIndex((cut) => cut.regionId === regionId)
+      if (
+        !afterRegion ||
+        afterRegion.rotation !== rotationAtStart ||
+        afterIndex < 0
+      ) {
+        revokeProcessedCut(newCut)
+        return
+      }
+
+      const oldCut = afterPreload.processedCuts[afterIndex]
+      revokeProcessedCut(oldCut)
+
+      const nextCuts = [...afterPreload.processedCuts]
+      nextCuts[afterIndex] = newCut
+      invalidateStage2Layout()
+      set({ processedCuts: nextCuts })
+    } catch {
+      // Leave existing preview in place if single-cut regen fails.
     }
   },
 

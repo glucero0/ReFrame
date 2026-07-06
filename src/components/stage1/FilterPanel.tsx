@@ -1,7 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState, type FocusEvent, type KeyboardEvent, type PointerEvent } from 'react'
 import { useStage1Store } from '../../store/stage1Store'
 import { DEFAULT_FILTERS, normalizeFilterSettings } from '../../lib/regionTypes'
 import AdvancedFilterPanel from './AdvancedFilterPanel'
+
+// Arrow/Home/End/PageUp/PageDown nudge a range input's value without any
+// pointer events, so a held-down key needs to count as "dragging" too (it
+// can auto-repeat several regens per second, same as a mouse drag).
+const RANGE_KEYS = new Set([
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+])
+
+function isRangeInput(target: EventTarget | null): target is HTMLInputElement {
+  return target instanceof HTMLInputElement && target.type === 'range'
+}
 
 export default function FilterPanel() {
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -13,6 +31,24 @@ export default function FilterPanel() {
   const processedCuts = useStage1Store((s) => s.processedCuts)
   const bgColorPickActive = useStage1Store((s) => s.bgColorPickActive)
   const setBgColorPickActive = useStage1Store((s) => s.setBgColorPickActive)
+  const setFilterSliderDragging = useStage1Store((s) => s.setFilterSliderDragging)
+
+  // A pointerup/pointercancel's *target* is hit-tested against whatever is
+  // actually under the cursor at release time — during a real drag the
+  // cursor easily drifts off the (thin) slider track, so delegating release
+  // detection via bubbling from the slider itself missed releases whenever
+  // that happened, leaving filterSliderDragging stuck true and the Export
+  // panel buttons stuck disabled. Listening on window sidesteps hit-testing
+  // entirely: any pointer release anywhere means the drag is over.
+  useEffect(() => {
+    const clearDragging = () => setFilterSliderDragging(false)
+    window.addEventListener('pointerup', clearDragging)
+    window.addEventListener('pointercancel', clearDragging)
+    return () => {
+      window.removeEventListener('pointerup', clearDragging)
+      window.removeEventListener('pointercancel', clearDragging)
+    }
+  }, [setFilterSliderDragging])
 
   const activeRegion =
     regions.find((region) => region.id === selectedRegionId) ?? regions[0]
@@ -61,8 +97,37 @@ export default function FilterPanel() {
     setRegionFilters(activeRegionId, partial)
   }
 
+  // Delegated on a single wrapper rather than on each of the ~14 range
+  // inputs here and in AdvancedFilterPanel: previews regenerate on every
+  // throttled filter edit (~every 100ms while dragging), which was making
+  // isProcessing-driven UI elsewhere (e.g. the Export panel buttons) flicker
+  // continuously. Marking "a filter slider is being held" for the duration
+  // of the drag/keypress lets that UI freeze instead of chasing every tick.
+  // Only *starting* a drag is delegated this way — pointerdown's target is
+  // hit-tested at the press location, which is reliably the slider the user
+  // just grabbed. Ending it is handled by the window listener above instead
+  // (see the comment there for why).
+  const onSliderPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (isRangeInput(event.target)) setFilterSliderDragging(true)
+  }
+  const onSliderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isRangeInput(event.target) && RANGE_KEYS.has(event.key)) setFilterSliderDragging(true)
+  }
+  const onSliderKeyUp = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isRangeInput(event.target) && RANGE_KEYS.has(event.key)) setFilterSliderDragging(false)
+  }
+  const onSliderBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (isRangeInput(event.target)) setFilterSliderDragging(false)
+  }
+
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      onPointerDown={onSliderPointerDown}
+      onKeyDown={onSliderKeyDown}
+      onKeyUp={onSliderKeyUp}
+      onBlurCapture={onSliderBlur}
+    >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
           Filters

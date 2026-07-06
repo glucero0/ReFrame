@@ -10,6 +10,7 @@ import {
   regionToFabricObject,
 } from '../../lib/stage1FabricRegions'
 import { drawExportBoundsOverlay } from '../../lib/stage1ExportOverlay'
+import { isRotationSliderDragging } from '../../lib/previewInteractionGate'
 import type { Region } from '../../lib/regionTypes'
 import { imageToObjectUrl } from '../../lib/imageLoader'
 
@@ -176,7 +177,7 @@ export function useSegmentationCanvas(
     if (!canvas || !canvasReady) return
 
     const drawOverlay = () => {
-      if (syncingRef.current) return
+      if (syncingRef.current || isRotationSliderDragging()) return
       const { regions: regionList, padding: regionPadding } = useStage1Store.getState()
       drawExportBoundsOverlay(canvas, regionList, regionPadding, getCanvasScale(canvas))
     }
@@ -211,7 +212,7 @@ export function useSegmentationCanvas(
       pushUndo()
       const sourceRegion = scaleRegionToSource(displayRegion, scale)
       const next = currentRegions.map((r) =>
-        r.id === sourceRegion.id ? sourceRegion : r,
+        r.id === sourceRegion.id ? { ...sourceRegion, rotation: r.rotation } : r,
       )
       setRegions(next)
     }

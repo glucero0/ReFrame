@@ -12,6 +12,7 @@ const sampleRegion: Region = {
   w: 100,
   h: 50,
   label: 1,
+  rotation: 0,
 }
 
 const sampleCut: ProcessedCut = {
@@ -21,6 +22,7 @@ const sampleCut: ProcessedCut = {
   previewUrl: 'preview.png',
   originalPreviewUrl: 'original.png',
   detectedBackgroundColor: null,
+  bakedRotation: 0,
 }
 
 function resetStores(): void {

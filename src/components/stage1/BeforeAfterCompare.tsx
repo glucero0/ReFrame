@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import type { Rgb } from '../../lib/backgroundRemoval'
 import CutoutPreviewSurface from './CutoutPreviewSurface'
 
@@ -9,21 +9,26 @@ type BeforeAfterCompareProps = {
   fillHeight?: boolean
   pickColorActive?: boolean
   onPickColor?: (color: Rgb) => void
+  registerEditedAsDragTarget?: boolean
 }
 
-export default function BeforeAfterCompare({
+function BeforeAfterCompare({
   originalUrl,
   editedUrl,
   alt,
   fillHeight = false,
   pickColorActive = false,
   onPickColor,
+  registerEditedAsDragTarget = false,
 }: BeforeAfterCompareProps) {
   const [compare, setCompare] = useState(false)
   const [split, setSplit] = useState(50)
 
+  // max-h/max-w + auto sizing (rather than h-full/w-full) makes the <img>'s
+  // own box match its rendered pixels exactly, with no letterboxing. That
+  // keeps whatever wraps it (e.g. the rotation stage) tightly fitted too.
   const surfaceClass = fillHeight
-    ? 'h-full w-full object-contain'
+    ? 'max-h-full max-w-full w-auto h-auto object-contain'
     : 'max-h-48 max-w-full object-contain'
   const frameClass = fillHeight
     ? 'flex h-full min-h-0 w-full items-center justify-center overflow-hidden'
@@ -90,6 +95,7 @@ export default function BeforeAfterCompare({
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
             <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-1.5">
@@ -107,6 +113,7 @@ export default function BeforeAfterCompare({
             src={editedUrl}
             alt={alt}
             surfaceClassName={surfaceClass}
+            registerAsDragTarget={registerEditedAsDragTarget}
           />
         </div>
         <div className="mt-2">{compareCheckbox}</div>
@@ -136,6 +143,7 @@ export default function BeforeAfterCompare({
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
           </div>
@@ -182,6 +190,7 @@ export default function BeforeAfterCompare({
               src={editedUrl}
               alt={alt}
               surfaceClassName={surfaceClass}
+              registerAsDragTarget={registerEditedAsDragTarget}
             />
           </div>
         </div>
@@ -203,3 +212,5 @@ export default function BeforeAfterCompare({
     </div>
   )
 }
+
+export default memo(BeforeAfterCompare)
