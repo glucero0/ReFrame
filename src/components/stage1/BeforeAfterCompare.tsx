@@ -24,8 +24,11 @@ function BeforeAfterCompare({
   const [compare, setCompare] = useState(false)
   const [split, setSplit] = useState(50)
 
+  // max-h/max-w + auto sizing (rather than h-full/w-full) makes the <img>'s
+  // own box match its rendered pixels exactly, with no letterboxing. That
+  // keeps whatever wraps it (e.g. the rotation stage) tightly fitted too.
   const surfaceClass = fillHeight
-    ? 'h-full w-full object-contain'
+    ? 'max-h-full max-w-full w-auto h-auto object-contain'
     : 'max-h-48 max-w-full object-contain'
   const frameClass = fillHeight
     ? 'flex h-full min-h-0 w-full items-center justify-center overflow-hidden'

@@ -10,10 +10,18 @@ export default function ExportPanel() {
   const setExportFormat = useStage1Store((s) => s.setExportFormat)
   const regions = useStage1Store((s) => s.regions)
   const isProcessing = useStage1Store((s) => s.isProcessing)
+  const filterSliderDragging = useStage1Store((s) => s.filterSliderDragging)
   const sourceImage = useStage1Store((s) => s.sourceImage)
   const goToStage2 = useAppStore((s) => s.goToStage2)
 
   const [stage2Error, setStage2Error] = useState<string | null>(null)
+
+  // While a filter slider is held, previews keep regenerating on every
+  // throttled tick, flipping isProcessing true/false continuously — which
+  // made these buttons flicker enabled/disabled the whole time the user was
+  // dragging. Treat the entire hold as "busy" so they stay put until the
+  // user releases and the (fast) final regen settles.
+  const busy = isProcessing || filterSliderDragging
 
   const handleCutApart = () => void cutApart()
 
@@ -56,15 +64,15 @@ export default function ExportPanel() {
       )}
       <button
         type="button"
-        disabled={!sourceImage || regions.length === 0 || isProcessing}
+        disabled={!sourceImage || regions.length === 0 || busy}
         className="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
         onClick={handleCutApart}
       >
-        {isProcessing ? 'Updating…' : 'Refresh preview'}
+        {busy ? 'Updating…' : 'Refresh preview'}
       </button>
       <button
         type="button"
-        disabled={processedCuts.length === 0 || isProcessing}
+        disabled={processedCuts.length === 0 || busy}
         className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-40"
         onClick={handleDownload}
       >
@@ -72,7 +80,7 @@ export default function ExportPanel() {
       </button>
       <button
         type="button"
-        disabled={regions.length === 0 || isProcessing}
+        disabled={regions.length === 0 || busy}
         className="w-full rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
         onClick={() => void handleGoToStage2()}
       >

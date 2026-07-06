@@ -44,6 +44,7 @@ export type Stage1State = {
   undoStack: Region[][]
   zoom: number
   bgColorPickActive: boolean
+  filterSliderDragging: boolean
 
   setSourceImage: (image: HTMLImageElement, name?: string) => void
   clearSourceImage: () => void
@@ -61,6 +62,7 @@ export type Stage1State = {
   selectRegion: (regionId: string | null) => void
   setZoom: (zoom: number) => void
   setBgColorPickActive: (active: boolean) => void
+  setFilterSliderDragging: (dragging: boolean) => void
   removeRegion: (id: string) => void
   regeneratePreviews: () => Promise<void>
   regenerateCutPreview: (regionId: string) => Promise<void>
@@ -82,6 +84,7 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   undoStack: [],
   zoom: 1,
   bgColorPickActive: false,
+  filterSliderDragging: false,
 
   setSourceImage: (image, name = 'pasted-image.png') => {
     const { processedCuts } = get()
@@ -225,6 +228,8 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
   setZoom: (zoom) => set({ zoom: Math.max(0.25, Math.min(zoom, 4)) }),
 
   setBgColorPickActive: (active) => set({ bgColorPickActive: active }),
+
+  setFilterSliderDragging: (dragging) => set({ filterSliderDragging: dragging }),
 
   removeRegion: (id) => {
     const { regions, pushUndo, regionFilters, processedCuts, selectedRegionId } = get()
