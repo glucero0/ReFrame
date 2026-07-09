@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { formatPixelDimensions, type CutoutTrayViewMode } from '../../lib/cutoutTrayView'
 import { useStage1Store } from '../../store/stage1Store'
 import { normalizeFilterSettings } from '../../lib/regionTypes'
 import {
@@ -244,6 +245,10 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
   const regionFilters = useStage1Store((s) => s.regionFilters)
 
   const previewPanelRef = useRef<HTMLDivElement>(null)
+  const [trayViewMode, setTrayViewMode] = useState<CutoutTrayViewMode>('fit')
+  const [pixelDimensions, setPixelDimensions] = useState<{ width: number; height: number } | null>(
+    null,
+  )
 
   const current = processedCuts[previewIndex]
   const total = processedCuts.length
@@ -254,6 +259,10 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
   const bakedRotation = current?.bakedRotation ?? 0
 
   const sliderBusy = isRotationSliderDragging()
+
+  useEffect(() => {
+    setPixelDimensions(null)
+  }, [current?.regionId, current?.previewUrl])
 
   const [processingIndicatorVisible, setProcessingIndicatorVisible] = useState(false)
   useEffect(() => {
@@ -313,7 +322,7 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
   if (regions.length === 0) {
     return (
       <div className="flex h-full items-center bg-white px-4 py-3 text-sm text-gray-500">
-        Draw cut regions on the canvas to see live previews here.
+        Draw cut regions on the canvas to see cutouts in the tray here.
       </div>
     )
   }
@@ -328,7 +337,7 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
       onKeyDown={handlePreviewKeyDown}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1">
-        <span className="text-sm font-medium text-gray-700">Live preview</span>
+        <span className="text-sm font-medium text-gray-700">Cutout tray</span>
         <button
           type="button"
           disabled={previewIndex <= 0 || showProcessing || total === 0}
@@ -344,7 +353,11 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
           {showProcessing
             ? 'Updating preview…'
             : total > 0 && current
-              ? `Cut ${current.label} (${previewIndex + 1} of ${total})`
+              ? `Cut ${current.label} (${previewIndex + 1} of ${total})${
+                  pixelDimensions
+                    ? ` · ${formatPixelDimensions(pixelDimensions.width, pixelDimensions.height)}`
+                    : ''
+                }`
               : 'Generating preview…'}
         </span>
         <button
@@ -357,6 +370,37 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
           }}
         >
           Next
+        </button>
+        <button
+          type="button"
+          disabled={!current || showProcessing}
+          className={`rounded border px-2 py-1 text-sm disabled:opacity-40 ${
+            trayViewMode === 'fit'
+              ? 'border-blue-600 bg-blue-50 text-blue-800'
+              : 'border-gray-300 bg-white hover:bg-gray-50'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            setTrayViewMode('fit')
+          }}
+        >
+          Fit to tray
+        </button>
+        <button
+          type="button"
+          disabled={!current || showProcessing}
+          className={`rounded border px-2 py-1 text-sm disabled:opacity-40 ${
+            trayViewMode === 'actual'
+              ? 'border-blue-600 bg-blue-50 text-blue-800'
+              : 'border-gray-300 bg-white hover:bg-gray-50'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            setTrayViewMode('actual')
+          }}
+          title="View at full pixel size with scrollbars"
+        >
+          Actual size
         </button>
         {current && !bgColorPickActive && (
           <div className="flex flex-wrap items-center gap-2">
@@ -431,7 +475,9 @@ export default function ImagePreviewer({ fillHeight = false }: ImagePreviewerPro
             editedUrl={current.previewUrl}
             alt={`Cut ${current.label}`}
             fillHeight={fillHeight}
+            viewMode={trayViewMode}
             pickColorActive={bgColorPickActive}
+            onIntrinsicSize={(width, height) => setPixelDimensions({ width, height })}
             registerEditedAsDragTarget
             onPickColor={(color) => {
               setRegionFilters(current.regionId, {

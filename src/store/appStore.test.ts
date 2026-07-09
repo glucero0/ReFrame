@@ -46,10 +46,22 @@ describe('useAppStore', () => {
   })
 
   describe('goToStage2', () => {
-    it('returns false when there are no regions', async () => {
+    it('returns false when there are no cutouts', async () => {
       const ok = await useAppStore.getState().goToStage2()
       expect(ok).toBe(false)
       expect(useAppStore.getState().currentStage).toBe(1)
+    })
+
+    it('enters stage 2 when only managed cutouts exist', async () => {
+      useStage1Store.setState({
+        regions: [],
+        processedCuts: [sampleCut],
+      })
+
+      const ok = await useAppStore.getState().goToStage2()
+
+      expect(ok).toBe(true)
+      expect(useAppStore.getState().currentStage).toBe(2)
     })
 
     it('returns false when preview generation produces no cuts', async () => {
