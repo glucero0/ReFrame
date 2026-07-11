@@ -35,8 +35,22 @@ function labelFromFileName(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-export function cutoutFileName(label: number): string {
-  return `cutout-${String(label).padStart(2, '0')}.png`
+/** Filesystem-safe timestamp: YYYYMMDD-HHmmss */
+export function formatCutoutTimestamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('') + `-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+}
+
+/** Unique cutout file name: label + timestamp + short id so saves never collide. */
+export function generateUniqueCutoutFileName(label: number, now = new Date()): string {
+  const labelPart = String(label).padStart(2, '0')
+  const stamp = formatCutoutTimestamp(now)
+  const uniqueId = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+  return `cutout-${labelPart}-${stamp}-${uniqueId}.png`
 }
 
 export async function manageItemFromProcessedCut(

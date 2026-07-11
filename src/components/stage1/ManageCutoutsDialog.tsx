@@ -8,7 +8,7 @@ import {
   writePngFile,
 } from '../../lib/cutoutFolder'
 import {
-  cutoutFileName,
+  generateUniqueCutoutFileName,
   manageItemsFromFolderEntries,
   manageItemsFromProcessedCuts,
   rerenderManageCutoutItem,
@@ -176,7 +176,7 @@ export default function ManageCutoutsDialog({ onClose }: ManageCutoutsDialogProp
       const nextItems: ManageCutoutItem[] = []
       for (let index = 0; index < items.length; index += 1) {
         const item = items[index]
-        const name = item.fileName ?? cutoutFileName(item.label)
+        const name = item.fileName ?? generateUniqueCutoutFileName(item.label)
         const handle = await writePngFile(directory, name, item.blob)
         nextItems.push({ ...item, fileName: name, fileHandle: handle })
       }
