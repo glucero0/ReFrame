@@ -8,6 +8,12 @@ build/
 
 # Firebase local deploy cache
 .firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Vercel local project linking
+.vercel/
 
 # Vite
 *.local
@@ -22,6 +28,10 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Credentials / keys
+*.pem
+*.key
 
 # Logs
 logs/
