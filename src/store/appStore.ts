@@ -18,9 +18,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   goToStage2: async () => {
     const stage1 = useStage1Store.getState()
-    if (stage1.regions.length === 0) return false
 
-    if (stage1.processedCuts.length === 0) {
+    if (stage1.processedCuts.length === 0 && stage1.regions.length > 0) {
       await stage1.regeneratePreviews()
     }
 

@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import type { Rgb } from '../../lib/backgroundRemoval'
+import type { CutoutTrayViewMode } from '../../lib/cutoutTrayView'
 import CutoutPreviewSurface from './CutoutPreviewSurface'
 
 type BeforeAfterCompareProps = {
@@ -7,8 +8,10 @@ type BeforeAfterCompareProps = {
   editedUrl: string
   alt: string
   fillHeight?: boolean
+  viewMode?: CutoutTrayViewMode
   pickColorActive?: boolean
   onPickColor?: (color: Rgb) => void
+  onIntrinsicSize?: (width: number, height: number) => void
   registerEditedAsDragTarget?: boolean
 }
 
@@ -17,22 +20,24 @@ function BeforeAfterCompare({
   editedUrl,
   alt,
   fillHeight = false,
+  viewMode = 'fit',
   pickColorActive = false,
   onPickColor,
+  onIntrinsicSize,
   registerEditedAsDragTarget = false,
 }: BeforeAfterCompareProps) {
   const [compare, setCompare] = useState(false)
   const [split, setSplit] = useState(50)
 
-  // max-h/max-w + auto sizing (rather than h-full/w-full) makes the <img>'s
-  // own box match its rendered pixels exactly, with no letterboxing. That
-  // keeps whatever wraps it (e.g. the rotation stage) tightly fitted too.
+  const frameOverflow = viewMode === 'actual' ? 'overflow-auto' : 'overflow-hidden'
+  const frameAlign =
+    viewMode === 'actual' ? 'items-start justify-start' : 'items-center justify-center'
   const surfaceClass = fillHeight
     ? 'max-h-full max-w-full w-auto h-auto object-contain'
     : 'max-h-48 max-w-full object-contain'
   const frameClass = fillHeight
-    ? 'flex h-full min-h-0 w-full items-center justify-center overflow-hidden'
-    : 'flex justify-center'
+    ? `flex h-full min-h-0 w-full ${frameAlign} ${frameOverflow}`
+    : `flex justify-center ${frameOverflow}`
   const rootClass = fillHeight ? 'flex h-full min-h-0 flex-col' : undefined
   const singleShellClass = fillHeight
     ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200'
@@ -67,6 +72,7 @@ function BeforeAfterCompare({
               alt={`${alt} original`}
               className="h-full w-full"
               surfaceClassName={surfaceClass}
+              viewMode={viewMode}
               onPickColor={onPickColor}
             />
           </div>
@@ -95,6 +101,8 @@ function BeforeAfterCompare({
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                viewMode={viewMode}
+                onIntrinsicSize={onIntrinsicSize}
                 registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
@@ -113,6 +121,8 @@ function BeforeAfterCompare({
             src={editedUrl}
             alt={alt}
             surfaceClassName={surfaceClass}
+            viewMode={viewMode}
+            onIntrinsicSize={onIntrinsicSize}
             registerAsDragTarget={registerEditedAsDragTarget}
           />
         </div>
@@ -127,7 +137,7 @@ function BeforeAfterCompare({
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200">
           <div className="flex min-h-0 flex-1">
             <div
-              className="flex h-full min-h-0 shrink-0 items-center justify-center overflow-hidden border-r border-gray-200 p-2"
+              className={`flex h-full min-h-0 shrink-0 ${frameAlign} ${frameOverflow} border-r border-gray-200 p-2`}
               style={{ width: `${split}%` }}
             >
               <CutoutPreviewSurface
@@ -135,14 +145,17 @@ function BeforeAfterCompare({
                 alt={`${alt} original`}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                viewMode={viewMode}
               />
             </div>
-            <div className="flex h-full min-h-0 flex-1 items-center justify-center overflow-hidden p-2">
+            <div className={`flex h-full min-h-0 flex-1 ${frameAlign} ${frameOverflow} p-2`}>
               <CutoutPreviewSurface
                 src={editedUrl}
                 alt={alt}
                 className="h-full w-full"
                 surfaceClassName={surfaceClass}
+                viewMode={viewMode}
+                onIntrinsicSize={onIntrinsicSize}
                 registerAsDragTarget={registerEditedAsDragTarget}
               />
             </div>
@@ -180,16 +193,19 @@ function BeforeAfterCompare({
               src={originalUrl}
               alt={`${alt} original`}
               surfaceClassName={surfaceClass}
+              viewMode={viewMode}
             />
           </div>
           <div
-            className="flex flex-1 items-center justify-center overflow-hidden"
+            className={`flex flex-1 ${frameAlign} ${frameOverflow}`}
             style={{ width: `${100 - split}%` }}
           >
             <CutoutPreviewSurface
               src={editedUrl}
               alt={alt}
               surfaceClassName={surfaceClass}
+              viewMode={viewMode}
+              onIntrinsicSize={onIntrinsicSize}
               registerAsDragTarget={registerEditedAsDragTarget}
             />
           </div>

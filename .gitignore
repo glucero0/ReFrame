@@ -6,6 +6,9 @@ dist/
 dist-ssr/
 build/
 
+# Firebase local deploy cache
+.firebase/
+
 # Vite
 *.local
 

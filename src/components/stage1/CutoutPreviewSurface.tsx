@@ -1,6 +1,15 @@
-import { memo, useEffect, useRef, type MouseEvent, type ReactEventHandler } from 'react'
+import {
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactEventHandler,
+} from 'react'
 import { sampleImageColorAtClientPoint } from '../../lib/backgroundRemoval'
 import { CHECKERBOARD_BG } from '../../lib/checkerboardCanvas'
+import type { CutoutTrayViewMode } from '../../lib/cutoutTrayView'
 import {
   registerPreviewCanvas,
   registerPreviewImageEl,
@@ -12,8 +21,25 @@ type CutoutPreviewSurfaceProps = {
   alt: string
   className?: string
   surfaceClassName?: string
+  viewMode?: CutoutTrayViewMode
+  onIntrinsicSize?: (width: number, height: number) => void
   onPickColor?: (color: { r: number; g: number; b: number }) => void
   registerAsDragTarget?: boolean
+}
+
+function applyImageLayout(
+  img: HTMLImageElement,
+  viewMode: CutoutTrayViewMode,
+  width: number,
+  height: number,
+): void {
+  if (viewMode === 'actual') {
+    img.width = width
+    img.height = height
+    return
+  }
+  img.removeAttribute('width')
+  img.removeAttribute('height')
 }
 
 function CutoutPreviewSurface({
@@ -21,9 +47,15 @@ function CutoutPreviewSurface({
   alt,
   className = '',
   surfaceClassName = 'max-h-48 max-w-full object-contain',
+  viewMode = 'fit',
+  onIntrinsicSize,
   onPickColor,
   registerAsDragTarget = false,
 }: CutoutPreviewSurfaceProps) {
+  const [intrinsicSize, setIntrinsicSize] = useState<{ width: number; height: number } | null>(
+    null,
+  )
+
   const bindStageRef = (el: HTMLSpanElement | null) => {
     if (registerAsDragTarget) {
       registerPreviewImg(el)
@@ -39,21 +71,23 @@ function CutoutPreviewSurface({
     }
   }
 
-  // Filter edits (brightness/contrast/etc.) swap `src` to a freshly
-  // generated blob on the *same* region every ~100ms while dragging, always
-  // at identical pixel dimensions. But because this element is sized from
-  // its own intrinsic dimensions (`w-auto h-auto`, needed so the rotation
-  // drag stage tightly wraps it), the box has no known size again the
-  // moment a new blob starts decoding — the browser can briefly collapse
-  // and then snap back once it decodes, which reads as a constant
-  // jiggle/reflow during filter dragging. Setting width/height attributes
-  // from the last decoded frame makes the browser reserve the identical
-  // box immediately, before the new blob has even started decoding.
+  // Filter edits swap `src` at identical pixel dimensions. Reserve layout with
+  // aspect-ratio in fit mode (not full pixel width/height attrs) so large
+  // cutouts still scale down inside the tray.
   const handleImgLoad: ReactEventHandler<HTMLImageElement> = (event) => {
     const el = event.currentTarget
-    el.width = el.naturalWidth
-    el.height = el.naturalHeight
+    const width = el.naturalWidth
+    const height = el.naturalHeight
+    setIntrinsicSize({ width, height })
+    onIntrinsicSize?.(width, height)
+    applyImageLayout(el, viewMode, width, height)
   }
+
+  useEffect(() => {
+    const el = imgElRef.current
+    if (!el || !intrinsicSize) return
+    applyImageLayout(el, viewMode, intrinsicSize.width, intrinsicSize.height)
+  }, [viewMode, intrinsicSize])
 
   const bindCanvasRef = (el: HTMLCanvasElement | null) => {
     if (registerAsDragTarget) {
@@ -76,37 +110,58 @@ function CutoutPreviewSurface({
     if (color) onPickColor(color)
   }
 
+  const fitSurfaceClass =
+    viewMode === 'fit' ? 'h-full w-full max-h-full max-w-full object-contain' : surfaceClassName
+
   const img = (
     <img
       ref={bindImgElRef}
       src={src}
       alt={alt}
       draggable={false}
-      className={`${surfaceClassName}${onPickColor ? ' cursor-crosshair' : ''}`}
+      className={`${fitSurfaceClass}${onPickColor ? ' cursor-crosshair' : ''}`}
       onClick={handleClick}
       onLoad={handleImgLoad}
     />
   )
 
+  const stageStyle: CSSProperties | undefined =
+    viewMode === 'fit' && intrinsicSize
+      ? {
+          aspectRatio: `${intrinsicSize.width} / ${intrinsicSize.height}`,
+          maxHeight: '100%',
+          maxWidth: '100%',
+        }
+      : undefined
+
+  const containerClass =
+    viewMode === 'actual'
+      ? 'items-start justify-start overflow-auto'
+      : 'items-center justify-center overflow-hidden'
+
   return (
     <div
-      className={`relative flex h-full w-full items-center justify-center overflow-hidden ${className}`}
+      className={`relative flex h-full w-full ${containerClass} ${className}`}
       style={{ background: CHECKERBOARD_BG }}
     >
       {registerAsDragTarget ? (
-        // Wrapper shrink-wraps to the rendered image. While dragging the
-        // rotation slider, the <img> is hidden and a same-sized <canvas> is
-        // drawn instead (see previewInteractionGate) — this avoids relying
-        // on the browser's CSS transform/compositor pipeline, which was
-        // still visibly hitching even once GPU-layer promotion was
-        // pre-warmed and its bounds pre-sized.
-        <span ref={bindStageRef} className="relative inline-flex max-h-full max-w-full items-center justify-center">
+        <span
+          ref={bindStageRef}
+          className={`relative inline-flex ${
+            viewMode === 'fit' ? 'max-h-full max-w-full items-center justify-center' : ''
+          }`}
+          style={stageStyle}
+        >
           {img}
           <canvas
             ref={bindCanvasRef}
             className="pointer-events-none absolute left-1/2 top-1/2 hidden"
             aria-hidden="true"
           />
+        </span>
+      ) : viewMode === 'fit' && intrinsicSize ? (
+        <span className="inline-flex max-h-full max-w-full items-center justify-center" style={stageStyle}>
+          {img}
         </span>
       ) : (
         img

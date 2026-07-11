@@ -91,8 +91,8 @@ export default function StageOne() {
             aria-valuenow={Math.round(previewShare * 100)}
             aria-valuemin={MIN_PREVIEW_SHARE * 100}
             aria-valuemax={MAX_PREVIEW_SHARE * 100}
-            aria-label="Resize live preview panel"
-            title="Drag to resize preview. Double-click to reset."
+            aria-label="Resize cutout tray panel"
+            title="Drag to resize cutout tray. Double-click to reset."
             onMouseDown={onDividerMouseDown}
             onDoubleClick={onDividerDoubleClick}
             className="group flex cursor-row-resize items-center justify-center border-y border-gray-200 bg-gray-100 hover:bg-gray-200"

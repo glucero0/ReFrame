@@ -66,6 +66,7 @@ export type Stage1State = {
   removeRegion: (id: string) => void
   regeneratePreviews: () => Promise<void>
   regenerateCutPreview: (regionId: string) => Promise<void>
+  commitProcessedCuts: (cuts: ProcessedCut[]) => void
   cutApart: () => Promise<void>
 }
 
@@ -376,5 +377,16 @@ export const useStage1Store = create<Stage1State>((set, get) => ({
 
   cutApart: async () => {
     await get().regeneratePreviews()
+  },
+
+  commitProcessedCuts: (cuts) => {
+    const { processedCuts } = get()
+    revokeProcessedCuts(processedCuts)
+    invalidateStage2Layout()
+    set({
+      processedCuts: cuts,
+      previewIndex: 0,
+      selectedRegionId: cuts[0]?.regionId ?? null,
+    })
   },
 }))
